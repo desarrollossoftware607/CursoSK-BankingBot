@@ -12,7 +12,52 @@
 ## Objetivo General
 
 Al finalizar el curso, los participantes serán capaces de **crear agentes de IA multimodales** (documentos, imágenes, audios) que resuelvan problemas de negocio del mundo real. Sabrán crear servicios, tomar decisiones de arquitectura, programarlos y desplegarlos en producción — 100% sobre el ecosistema Microsoft Azure.
+## Plataforma: Microsoft Foundry (antes Azure AI Studio)
 
+> **Referencia oficial:** https://learn.microsoft.com/es-mx/azure/foundry/
+
+Microsoft Foundry es la plataforma unificada de Azure para operaciones de IA empresarial, construcción de modelos y desarrollo de aplicaciones. Consolida servicios anteriores (Azure AI Studio, Azure AI Services) bajo un único namespace con:
+- **Foundry Models** — Modelos vendidos directamente por Azure (GPT-4, GPT-4o, GPT-4.1-mini, DeepSeek-R1, etc.)
+- **Foundry Agent Service** — Orquestación y hospedaje de agentes de IA
+- **Foundry Tools** — Speech, Translator, Document Intelligence, Content Safety, Vision
+- **Foundry IQ** — Base de conocimiento conectada a agentes con citaciones
+- **Foundry Local** — Ejecución de LLMs en dispositivo de forma gratuita
+- **Control Plane** — RBAC unificado, networking, políticas bajo un solo Azure resource provider
+
+| Concepto Anterior | Concepto Actual en Foundry |
+|---|---|
+| Azure AI Studio / Azure AI Foundry | Microsoft Foundry |
+| Azure AI Services | Foundry Tools |
+| Portal Foundry (classic) | Portal Foundry (nuevo) |
+| Assistants API (Agents v0.5/v1) | Responses API (Agents v2) |
+| Hub + Azure OpenAI + Azure AI Services | Foundry resource (único, con proyectos) |
+| Múltiples SDKs y endpoints | `azure-ai-projects 2.x` + `OpenAI()` contra un project endpoint |
+
+**Portal:** https://ai.azure.com/  
+**SDK C#:** https://learn.microsoft.com/es-mx/azure/foundry/how-to/develop/sdk-overview?pivots=programming-language-csharp
+
+## Semantic Kernel — SDK de Orquestación de Agentes
+
+> **Referencia oficial:** https://learn.microsoft.com/en-us/semantic-kernel/
+
+Semantic Kernel es un SDK ligero y open-source que permite construir agentes de IA e integrar los últimos modelos en código C#, Python o Java. Sirve como middleware eficiente para soluciones enterprise.
+
+**Conceptos clave del SDK:**
+- **Kernel** — Contenedor central de servicios y plugins (patrón DI)
+- **Plugins** — Funciones nativas en C# expuestas al LLM con `[KernelFunction]`
+- **Memory / Vector Store Connectors** — Conectores para bases de datos vectoriales
+- **Agent Framework** — Creación de agentes (`ChatCompletionAgent`, `OpenAIAssistantAgent`)
+- **Orchestration** — Orquestación multi-agente
+- **Process Framework** — Flujos de trabajo con Steps, Events, State
+
+**Paquetes NuGet del Agent Framework:**
+| Paquete | Propósito |
+|---|---|
+| `Microsoft.SemanticKernel` | Core del SDK (requerido) |
+| `Microsoft.SemanticKernel.Agents.Core` | Incluye `ChatCompletionAgent` |
+| `Microsoft.SemanticKernel.Agents.OpenAI` | `OpenAIAssistantAgent` via API de Assistants |
+| `Microsoft.SemanticKernel.Agents.Orchestration` | Framework de orquestación multi-agente |
+| `Microsoft.SemanticKernel.Agents.Abstractions` | Abstracciones core del Agent Framework |
 ## Proyecto de Referencia en Producción
 
 El curso se apoya en un **sistema real en producción**: un agente conversacional multicanal (WhatsApp, Messenger, Chat Web) para un laboratorio clínico, construido con:
@@ -30,6 +75,8 @@ El curso se apoya en un **sistema real en producción**: un agente conversaciona
 | Multi-LLM (Azure OpenAI / Google Gemini) | Selección dinámica por configuración | `Program.cs`, `CotizacionIntegration.cs` |
 | Clasificación de intenciones del usuario | Prompt DeterminarIntencion | `Prompts/LabAnalisis/DeterminarIntencion/` |
 
+> **Nota sobre plataforma:** El proyecto de referencia utiliza recursos Azure OpenAI (Foundry classic). Durante el curso se muestra tanto la creación de recursos en el portal clásico como la migración al nuevo portal de Microsoft Foundry.
+
 ---
 
 ## Jornalización Detallada
@@ -46,17 +93,105 @@ El curso se apoya en un **sistema real en producción**: un agente conversaciona
 |-------|---------|
 | **Tema Principal** | Fundamentos y Arquitectura de Agentes |
 | **Subtemas** | Conceptos de IA Generativa, arquitectura de agentes modernos, configuración de entornos .NET/C# y conectores de Azure OpenAI |
-| **Herramientas Microsoft IA** | Azure OpenAI Service, Semantic Kernel SDK, Visual Studio / VS Code |
+| **Herramientas Microsoft IA** | Microsoft Foundry, Azure OpenAI Service, Semantic Kernel SDK, Visual Studio / VS Code |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
 - Qué es un agente de IA vs. un chatbot simple
 - Arquitectura moderna: Kernel → Plugins → Planners → Memory
+- Microsoft Foundry: la plataforma unificada de IA en Azure (evolución de Azure AI Studio)
 - Azure OpenAI Service: modelos disponibles (GPT-4, GPT-4o, GPT-4.1-mini)
 - Semantic Kernel como orquestador: por qué Microsoft lo creó
+- Agent Framework de Semantic Kernel: `ChatCompletionAgent`, `OpenAIAssistantAgent`, orquestación multi-agente
+
+**🔧 Paso a Paso — Levantar Servicios en Azure:**
+
+> **Prerrequisitos:** Cuenta de Azure activa con suscripción. Los nuevos usuarios obtienen $200 USD de crédito gratis.
+
+**Opción A — Portal de Microsoft Foundry (https://ai.azure.com):**
+1. Ingresar a https://ai.azure.com con su cuenta de Azure
+2. Asegurar que el toggle **"New Foundry"** esté activado (banner superior)
+3. Crear un nuevo proyecto:
+   - Seleccionar **"+ New project"**
+   - Asignar nombre del proyecto (ej: `BankingBot-Curso`)
+   - Seleccionar o crear un **Foundry resource** (tipo `AIServices`, SKU `S0`)
+   - Seleccionar región (ej: `East US` — verificar disponibilidad de modelos)
+4. Desplegar modelo de Chat:
+   - Ir a **Build > Models + endpoints**
+   - **Deploy model > Deploy base model**
+   - Seleccionar `gpt-4o-mini` (o `gpt-4.1-mini`)
+   - Nombre de deployment: `gpt-4o-mini` (este nombre se usa en el código)
+   - Tipo: `Standard`, asignar TPM según necesidad
+5. Copiar **Endpoint** y **API Key** desde la pantalla de bienvenida del proyecto
+
+**Opción B — Azure CLI *(recomendado para automatización)*:**
+```bash
+# 1. Login
+az login
+
+# 2. Crear resource group
+az group create --name rg-bankingbot-curso --location eastus
+
+# 3. Crear recurso Foundry (AIServices)
+az cognitiveservices account create \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --kind AIServices \
+    --sku s0 \
+    --location eastus \
+    --allow-project-management
+
+# 4. Configurar custom domain (debe ser globalmente único)
+az cognitiveservices account update \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --custom-domain bankingbot-foundry
+
+# 5. Crear proyecto
+az cognitiveservices account project create \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --project-name bankingbot-proyecto \
+    --location eastus
+
+# 6. Desplegar modelo de Chat (gpt-4o-mini)
+az cognitiveservices account deployment create \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --deployment-name gpt-4o-mini \
+    --model-name gpt-4o-mini \
+    --model-version "2024-07-18" \
+    --model-format OpenAI \
+    --sku-capacity 10 \
+    --sku-name Standard
+
+# 7. Obtener endpoint y key
+az cognitiveservices account show \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --query "properties.endpoint" -o tsv
+
+az cognitiveservices account keys list \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --query "key1" -o tsv
+```
+
+> ⚠️ **IMPORTANTE:** El nombre del deployment (`gpt-4o-mini`) es lo que se usa en las llamadas API, NO el nombre del modelo. Azure OpenAI siempre requiere el deployment name.
+
+**Opción C — Portal Clásico de Azure (portal.azure.com):**
+1. Ir a https://portal.azure.com → **Create a resource** → buscar "Azure OpenAI"
+2. Completar: Subscription, Resource Group, Region, Name, Pricing Tier (Standard)
+3. Network: seleccionar "All networks" (para desarrollo)
+4. Review + Create → Create
+5. Una vez creado, ir al recurso → **Go to Microsoft Foundry portal**
+6. Deployments → **+ Deploy model** → seleccionar modelo → confirmar
 
 **Actividad Práctica — Aprender Haciendo:**
-> Configuración del Kernel básico y primera conexión con modelos GPT-4 en Azure.
+> 1. Crear recurso Azure OpenAI / Foundry siguiendo las opciones A, B o C anteriores
+> 2. Desplegar modelo `gpt-4o-mini` en el recurso
+> 3. Configurar `appsettings.Development.json` con Endpoint, ApiKey y DeploymentName
+> 4. Configuración del Kernel básico y primera conexión con modelos GPT-4 en Azure
 
 **🔗 Conexión con el Proyecto Real:**
 Se muestra cómo está configurado el Kernel en `Program.cs` (líneas 230-340):
@@ -211,7 +346,7 @@ Y cómo `WhatsAppChatController.RegistrarMensajeEntrante()` persiste todo en BD.
 |-------|---------|
 | **Tema Principal** | Embeddings y Representación Vectorial |
 | **Subtemas** | Conceptos de similaridad semántica, generación de vectores con ADA-002 y transformación de texto legal a representaciones numéricas |
-| **Herramientas Microsoft IA** | Azure OpenAI (Embedding models — text-embedding-ada-002) |
+| **Herramientas Microsoft IA** | Azure OpenAI (Embedding models — text-embedding-ada-002), Microsoft Foundry |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
@@ -219,6 +354,51 @@ Y cómo `WhatsAppChatController.RegistrarMensajeEntrante()` persiste todo en BD.
 - Similaridad coseno: cómo se comparan documentos
 - Modelos de embeddings: text-embedding-ada-002, text-embedding-3-small/large
 - Chunking: cómo dividir documentos largos para vectorización
+
+**🔧 Paso a Paso — Desplegar Modelo de Embedding en Azure:**
+
+**Desde el Portal de Foundry (https://ai.azure.com):**
+1. Abrir el proyecto creado en el Día 1
+2. Ir a **Build > Models + endpoints**
+3. **Deploy model > Deploy base model**
+4. Buscar y seleccionar `text-embedding-ada-002` (o `text-embedding-3-small`)
+5. Configurar:
+   - Deployment name: `text-embedding-ada-002` (usar este nombre exacto en el código)
+   - Deployment type: `Standard`
+   - Tokens per minute: ajustar según necesidad (mínimo 10K TPM)
+6. **Deploy**
+7. Verificar que el estado sea `Succeeded`
+
+**Desde Azure CLI:**
+```bash
+# Desplegar modelo de embedding en el mismo recurso Foundry
+az cognitiveservices account deployment create \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --deployment-name text-embedding-ada-002 \
+    --model-name text-embedding-ada-002 \
+    --model-version "2" \
+    --model-format OpenAI \
+    --sku-capacity 10 \
+    --sku-name Standard
+
+# Verificar deployment
+az cognitiveservices account deployment show \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --deployment-name text-embedding-ada-002
+```
+
+**Configuración en el proyecto (`appsettings.Development.json`):**
+```json
+"Embedding": {
+    "DeploymentName": "text-embedding-ada-002",
+    "Endpoint": "https://bankingbot-foundry.cognitiveservices.azure.com/",
+    "ApiKey": "<TU_API_KEY>"
+}
+```
+
+> ⚠️ **IMPORTANTE:** El deployment name debe coincidir exactamente con lo configurado en Azure. Si el deployment no existe, recibirás error `404 DeploymentNotFound`. Verificar siempre con `az cognitiveservices account deployment list`.
 
 **Actividad Práctica — Aprender Haciendo:**
 > Generación de vectores a partir de normativas legales y políticas de cumplimiento bancario.
@@ -234,7 +414,7 @@ Se muestra cómo el archivo `Datos/InfoLaboratorio.txt` actualmente se inyecta c
 |-------|---------|
 | **Tema Principal** | Bases de Datos Vectoriales (Vector Stores) |
 | **Subtemas** | Almacenamiento y recuperación eficiente de información, reducción de consumo de tokens y conectores de memoria |
-| **Herramientas Microsoft IA** | Azure AI Search, Semantic Kernel Memory Connectors |
+| **Herramientas Microsoft IA** | Azure AI Search, Semantic Kernel Memory Connectors, Microsoft Foundry |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
@@ -242,6 +422,39 @@ Se muestra cómo el archivo `Datos/InfoLaboratorio.txt` actualmente se inyecta c
 - Semantic Kernel Memory Connectors: TextMemoryPlugin
 - Reducción de tokens: de inyectar todo el texto → solo los fragmentos relevantes
 - Índices de búsqueda: creación, actualización, eliminación
+
+**🔧 Paso a Paso — Crear Azure AI Search para Vector Store:**
+
+**Desde el Portal de Azure (portal.azure.com):**
+1. **Create a resource** → buscar "Azure AI Search" (antes Azure Cognitive Search)
+2. Configurar:
+   - Resource group: usar el mismo (`rg-bankingbot-curso`)
+   - Service name: `bankingbot-search` (globalmente único)
+   - Location: misma región que el recurso Foundry
+   - Pricing tier: **Free** (para desarrollo, 50MB, 3 índices) o **Basic** (producción)
+3. **Review + Create** → **Create**
+4. Una vez creado, ir al recurso:
+   - Copiar **URL** (ej: `https://bankingbot-search.search.windows.net`)
+   - Ir a **Settings > Keys** → copiar **Primary admin key**
+
+**Desde Azure CLI:**
+```bash
+# Crear servicio de Azure AI Search
+az search service create \
+    --name bankingbot-search \
+    --resource-group rg-bankingbot-curso \
+    --sku free \
+    --location eastus
+
+# Obtener la admin key
+az search admin-key show \
+    --service-name bankingbot-search \
+    --resource-group rg-bankingbot-curso \
+    --query "primaryKey" -o tsv
+```
+
+**Alternativa In-Memory (para desarrollo sin Azure AI Search):**
+> El proyecto `CursoSK.BankingBot` usa un **vector store en memoria** con `ConcurrentDictionary` + `CosineSimilarity` de `System.Numerics.Tensors`. Esto es ideal para desarrollo y aprendizaje. En producción, reemplazar por Azure AI Search.
 
 **Actividad Práctica — Aprender Haciendo:**
 > Configuración de una base de datos vectorial para indexar normativas bancarias actualizadas.
@@ -330,7 +543,7 @@ Se estudia cómo los plugins nativos ya se conectan a la API REST de WhatsApp Cl
 |-------|---------|
 | **Tema Principal** | Agentes Multimodales: Audio |
 | **Subtemas** | Transcripción con Whisper e integración con FFmpeg para extracción de audio |
-| **Herramientas Microsoft IA** | Azure OpenAI (Whisper), FFmpeg |
+| **Herramientas Microsoft IA** | Azure OpenAI (Whisper / gpt-4o-mini-transcribe), FFmpeg, Microsoft Foundry |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
@@ -338,6 +551,69 @@ Se estudia cómo los plugins nativos ya se conectan a la API REST de WhatsApp Cl
 - Formatos soportados y conversión con FFmpeg
 - REST API vs. SDK para audio processing
 - Flujo multimodal: audio → texto → agente → respuesta
+
+**🔧 Paso a Paso — Desplegar Modelo de Audio (Whisper) en Azure:**
+
+> **Nota:** Whisper y los modelos de transcripción pueden requerir un recurso Azure OpenAI separado si su región no soporta el modelo en el recurso principal.
+
+**Desde el Portal de Foundry (https://ai.azure.com):**
+1. Abrir el proyecto (o crear un recurso adicional si la región no soporta modelos de audio)
+2. **Build > Models + endpoints** → **Deploy model > Deploy base model**
+3. Buscar `whisper` o `gpt-4o-mini-transcribe`
+4. Configurar:
+   - Deployment name: `gpt-4o-mini-transcribe`
+   - Deployment type: `Standard`
+5. **Deploy** y esperar `Succeeded`
+6. Si el modelo no está disponible en su región:
+   - Crear un segundo recurso Foundry en una región compatible (ej: `Sweden Central`, `East US 2`)
+   - El endpoint y API key del recurso de audio serán diferentes al principal
+
+**Desde Azure CLI *(recurso separado para audio, si es necesario)*:**
+```bash
+# Crear recurso separado para audio (si región principal no soporta Whisper)
+az cognitiveservices account create \
+    --name bankingbot-audio \
+    --resource-group rg-bankingbot-curso \
+    --kind AIServices \
+    --sku s0 \
+    --location swedencentral
+
+az cognitiveservices account update \
+    --name bankingbot-audio \
+    --resource-group rg-bankingbot-curso \
+    --custom-domain bankingbot-audio
+
+# Desplegar modelo de audio
+az cognitiveservices account deployment create \
+    --name bankingbot-audio \
+    --resource-group rg-bankingbot-curso \
+    --deployment-name gpt-4o-mini-transcribe \
+    --model-name gpt-4o-mini-transcribe \
+    --model-version "2025-01-09" \
+    --model-format OpenAI \
+    --sku-capacity 10 \
+    --sku-name Standard
+
+# Obtener endpoint y key del recurso de audio
+az cognitiveservices account show \
+    --name bankingbot-audio \
+    --resource-group rg-bankingbot-curso \
+    --query "properties.endpoint" -o tsv
+
+az cognitiveservices account keys list \
+    --name bankingbot-audio \
+    --resource-group rg-bankingbot-curso \
+    --query "key1" -o tsv
+```
+
+**Configuración en el proyecto (`appsettings.Development.json`):**
+```json
+"Audio": {
+    "DeploymentName": "gpt-4o-mini-transcribe",
+    "Endpoint": "https://bankingbot-audio.cognitiveservices.azure.com",
+    "ApiKey": "<API_KEY_DEL_RECURSO_AUDIO>"
+}
+```
 
 **Actividad Práctica — Aprender Haciendo:**
 > Automatización de la transcripción de llamadas de servicio al cliente para detectar riesgos legales.
@@ -396,7 +672,7 @@ Y cómo `DomicilioPlugin.guardar_foto_whatsapp()` procesa fotos enviadas por pac
 |-------|---------|
 | **Tema Principal** | Arquitectura Multi-Agente y Planners |
 | **Subtemas** | Sistemas de múltiples agentes, delegación de tareas especializadas y uso de Planners para autonomía |
-| **Herramientas Microsoft IA** | Semantic Kernel Agent Framework (ChatCompletionAgent), Planners |
+| **Herramientas Microsoft IA** | Semantic Kernel Agent Framework (`ChatCompletionAgent`, `AgentGroupChat`, Orchestration), Microsoft Foundry Agent Service |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
@@ -405,6 +681,20 @@ Y cómo `DomicilioPlugin.guardar_foto_whatsapp()` procesa fotos enviadas por pac
 - Planners: Handlebars Planner y Stepwise Planner
 - Delegación: agente coordinador → agentes especializados
 - Terminación de conversaciones multi-agente
+- **Microsoft Foundry Agent Service**: orquestación y hospedaje de agentes en la nube
+  - Responses API (Agents v2) — evolución de Assistants API
+  - Memory: retener y recordar contexto entre interacciones
+  - Tool Catalog: +1,400 herramientas conectables
+  - Foundry IQ: grounding de respuestas con Knowledge Base empresarial
+  - Publicación: Microsoft 365, Teams, BizChat, contenedores
+
+**🔧 Instalación del Agent Framework (NuGet):**
+```bash
+# Paquetes necesarios para multi-agente
+dotnet add package Microsoft.SemanticKernel.Agents.Core
+dotnet add package Microsoft.SemanticKernel.Agents.OpenAI
+dotnet add package Microsoft.SemanticKernel.Agents.Orchestration  # Para orquestación avanzada
+```
 
 **Actividad Práctica — Aprender Haciendo:**
 > Diseñar una mesa de aprobación de créditos donde un agente líder delega tareas a agentes de cumplimiento.
@@ -517,7 +807,7 @@ Este flujo multi-paso se modela formalmente con Process Framework para onboardin
 |-------|---------|
 | **Tema Principal** | Seguridad, Ética y Gobernanza |
 | **Subtemas** | Filtros de contenido, manejo de PII y prevención de inyección de prompts |
-| **Herramientas Microsoft IA** | Azure AI Content Safety, Microsoft Purview, Entra ID |
+| **Herramientas Microsoft IA** | Azure AI Content Safety, Microsoft Purview, Entra ID, Microsoft Foundry Control Plane |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
@@ -526,6 +816,46 @@ Este flujo multi-paso se modela formalmente con Process Framework para onboardin
 - Prompt Injection: tipos de ataques y mitigaciones
 - Entra ID: autenticación y autorización
 - Responsible AI: principios de Microsoft
+- **Microsoft Foundry Control Plane**: RBAC unificado, networking, políticas de gobernanza
+
+**🔧 Paso a Paso — Configurar Content Safety en Azure:**
+
+**Desde el Portal de Foundry:**
+1. En el proyecto, ir a **Operate > Safety + Security**
+2. Crear **Content Filter** personalizado:
+   - Filtros para: Hate, Violence, Sexual, Self-harm
+   - Niveles: Low → Medium → High → Very High
+   - Opción de bloqueo o advertencia por categoría
+3. Asignar el Content Filter al deployment del modelo (`gpt-4o-mini`)
+
+**Desde Azure CLI:**
+```bash
+# Crear filtro de contenido personalizado (ejemplo)
+# Los filtros de contenido se configuran mejor desde el portal de Foundry
+# Se pueden asociar al crear o actualizar un deployment
+
+# Verificar deployments con sus filtros actuales
+az cognitiveservices account deployment list \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --output table
+```
+
+**Configurar RBAC en Foundry:**
+```bash
+# Obtener el resource ID del proyecto
+PROJECT_ID=$(az cognitiveservices account project show \
+    --name bankingbot-foundry \
+    --resource-group rg-bankingbot-curso \
+    --project-name bankingbot-proyecto \
+    --query id -o tsv)
+
+# Asignar rol "Azure AI User" a un miembro del equipo
+az role assignment create \
+    --role "Azure AI User" \
+    --assignee "usuario@empresa.com" \
+    --scope $PROJECT_ID
+```
 
 **Actividad Práctica — Aprender Haciendo:**
 > Configuración de filtros de seguridad para evitar fuga de información bancaria sensible.
@@ -549,7 +879,7 @@ Los participantes implementan las capas faltantes para el contexto bancario, don
 |-------|---------|
 | **Tema Principal** | Observabilidad y Evaluación (MLOps) |
 | **Subtemas** | Evaluación de performance, monitoreo de tasa de alucinaciones, telemetría y trazabilidad |
-| **Herramientas Microsoft IA** | Azure Monitor, Application Insights, Foundry Control Plane |
+| **Herramientas Microsoft IA** | Azure Monitor, Application Insights, Microsoft Foundry Control Plane (Observabilidad) |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
@@ -557,6 +887,58 @@ Los participantes implementan las capas faltantes para el contexto bancario, don
 - Métricas clave: latencia, tokens consumidos, tasa de éxito
 - Evaluación de calidad: groundedness, relevance, coherence
 - Trazabilidad: logging de cada paso del agente
+- **Microsoft Foundry Observability:**
+  - Tracing de agentes con la biblioteca de proyectos de Foundry
+  - Evaluación de flujos de trabajo de agente
+  - Dashboard de monitoreo de aplicaciones de IA generativa
+  - Evaluación continua en tiempo real
+
+**🔧 Paso a Paso — Configurar Application Insights:**
+
+**Desde Azure CLI:**
+```bash
+# Crear recurso de Application Insights
+az monitor app-insights component create \
+    --app bankingbot-insights \
+    --location eastus \
+    --resource-group rg-bankingbot-curso \
+    --kind web
+
+# Obtener la Instrumentation Key
+az monitor app-insights component show \
+    --app bankingbot-insights \
+    --resource-group rg-bankingbot-curso \
+    --query "instrumentationKey" -o tsv
+
+# Obtener la Connection String (preferida sobre Instrumentation Key)
+az monitor app-insights component show \
+    --app bankingbot-insights \
+    --resource-group rg-bankingbot-curso \
+    --query "connectionString" -o tsv
+```
+
+**Integrar en el proyecto .NET:**
+```bash
+dotnet add package Microsoft.ApplicationInsights.AspNetCore
+```
+
+**En `appsettings.json`:**
+```json
+"ApplicationInsights": {
+    "ConnectionString": "<CONNECTION_STRING_DE_APP_INSIGHTS>"
+}
+```
+
+**En `Program.cs`:**
+```csharp
+builder.Services.AddApplicationInsightsTelemetry();
+```
+
+**Desde el Portal de Foundry — Monitoreo de Agentes:**
+1. Ir a **Operate > Monitoring**
+2. Visualizar métricas: requests, tokens, latencia, errores
+3. Configurar alertas por umbrales de rendimiento
+4. Habilitar **Continuous Evaluation** para calidad de respuestas
 
 **Actividad Práctica — Aprender Haciendo:**
 > Realización de pruebas de estrés y trazado del razonamiento del agente para auditoría interna.
@@ -578,7 +960,7 @@ Los participantes agregan Application Insights y crean dashboards de monitoreo.
 |-------|---------|
 | **Tema Principal** | Visualización y Analítica de Resultados |
 | **Subtemas** | Monitoreo del desempeño del agente, precisión de extracción OCR y métricas de negocio |
-| **Herramientas Microsoft IA** | Power BI, Power Platform, Fabric IQ |
+| **Herramientas Microsoft IA** | Power BI, Power Platform, Foundry IQ |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
@@ -608,13 +990,74 @@ Los participantes crean un dashboard equivalente para métricas bancarias.
 |-------|---------|
 | **Tema Principal** | Proyecto Final: Solución Bancaria Integral |
 | **Subtemas** | Validación de la solución multidisciplinaria (OCR + RAG + Agentes) bajo el enfoque "aprender haciendo" |
-| **Herramientas Microsoft IA** | Ecosistema Microsoft IA (Azure OpenAI, Copilot Studio, Azure AI Studio) |
+| **Herramientas Microsoft IA** | Ecosistema Microsoft IA (Azure OpenAI, Copilot Studio, Microsoft Foundry) |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
 - Revisión arquitectónica de la solución completa
 - Patrones de despliegue: App Service, Container Apps
 - Checklist de producción: seguridad, observabilidad, escalabilidad
+
+**🔧 Paso a Paso — Desplegar la Aplicación en Azure App Service:**
+
+**Desde Azure CLI:**
+```bash
+# 1. Crear App Service Plan
+az appservice plan create \
+    --name bankingbot-plan \
+    --resource-group rg-bankingbot-curso \
+    --sku B1 \
+    --is-linux
+
+# 2. Crear Web App (.NET 9)
+az webapp create \
+    --name bankingbot-api \
+    --resource-group rg-bankingbot-curso \
+    --plan bankingbot-plan \
+    --runtime "DOTNETCORE:9.0"
+
+# 3. Configurar variables de entorno (secrets como App Settings)
+az webapp config appsettings set \
+    --name bankingbot-api \
+    --resource-group rg-bankingbot-curso \
+    --settings \
+    LLM__Azure__DeploymentName="gpt-4o-mini" \
+    LLM__Azure__Endpoint="https://bankingbot-foundry.cognitiveservices.azure.com/" \
+    LLM__Azure__ApiKey="<TU_API_KEY>" \
+    LLM__Embedding__DeploymentName="text-embedding-ada-002" \
+    LLM__Embedding__Endpoint="https://bankingbot-foundry.cognitiveservices.azure.com/" \
+    LLM__Embedding__ApiKey="<TU_API_KEY>" \
+    LLM__Audio__DeploymentName="gpt-4o-mini-transcribe" \
+    LLM__Audio__Endpoint="https://bankingbot-audio.cognitiveservices.azure.com" \
+    LLM__Audio__ApiKey="<API_KEY_AUDIO>"
+
+# 4. Publicar desde código local
+cd CursoSK.BankingBot
+dotnet clean
+dotnet publish -c Release -o ./publish_output
+cd publish_output
+zip -r ../deploy.zip .
+cd ..
+
+az webapp deployment source config-zip \
+    --name bankingbot-api \
+    --resource-group rg-bankingbot-curso \
+    --src deploy.zip
+
+# 5. Verificar despliegue
+az webapp browse --name bankingbot-api --resource-group rg-bankingbot-curso
+```
+
+> ⚠️ **Recuerda:** Siempre ejecutar `dotnet clean` y eliminar `publish_output` antes de `dotnet publish` para evitar caches. Recrear el .zip DESPUÉS del rebuild.
+
+**Checklist de Producción:**
+- [ ] Content Filters configurados en todos los deployments
+- [ ] Application Insights conectado
+- [ ] RBAC configurado con roles mínimos (`Azure AI User`)
+- [ ] Variables sensibles en App Settings (no en código)
+- [ ] HTTPS forzado en App Service
+- [ ] Health checks configurados
+- [ ] Logging estructurado con `ILogger`
 
 **Actividad Práctica — Aprender Haciendo:**
 > Presentación de la solución funcional capaz de analizar, razonar y decidir sobre un caso bancario real.
@@ -634,10 +1077,10 @@ Los participantes consolidan su proyecto final: agente bancario con OCR + RAG + 
 
 | Semana | Enfoque | Tecnologías Clave | Referencia en Proyecto |
 |--------|---------|-------------------|------------------------|
-| **1** | Fundamentos | Semantic Kernel, Azure OpenAI, Plugins nativos, Prompt Templates | `Program.cs`, `Plugins/*.cs`, `Prompts/` |
+| **1** | Fundamentos | Semantic Kernel, Azure OpenAI, Microsoft Foundry, Plugins nativos, Prompt Templates | `Program.cs`, `Plugins/*.cs`, `Prompts/` |
 | **2** | Memoria/RAG | Embeddings, Azure AI Search, RAG, OpenAPI plugins | `LaboratorioPlugin`, `AnalisisClinicosPlugin` |
-| **3** | Multimodalidad | Whisper, GPT-4 Vision, DALL-E, Multi-Agente, Copilot Studio | `CotizacionIntegration.TranscribeAudio()`, `ExtractMediaInfo()` |
-| **4** | Producción | Process Framework, Content Safety, Application Insights, Power BI | `DomicilioPlugin`, logging, deployment configs |
+| **3** | Multimodalidad | Whisper, GPT-4 Vision, DALL-E, Multi-Agente (Agent Framework), Copilot Studio | `CotizacionIntegration.TranscribeAudio()`, `ExtractMediaInfo()` |
+| **4** | Producción | Process Framework, Content Safety, Application Insights, Power BI, Azure App Service | `DomicilioPlugin`, logging, deployment configs |
 
 ## Mapeo: Jornalización ↔ Proyecto Implementado
 
@@ -670,3 +1113,37 @@ Los participantes consolidan su proyecto final: agente bancario con OCR + RAG + 
 ## Valor Diferenciador del Curso
 
 > **"No es un curso teórico más."** Cada tema se ancla a un sistema **real en producción** que procesa mensajes de WhatsApp, transcribe audios, genera cotizaciones y agenda citas — todo orquestado por Semantic Kernel con Azure OpenAI. Los participantes ven código real, entienden decisiones de arquitectura reales, y construyen su propia solución bancaria con las mismas herramientas.
+
+---
+
+## Recursos y Enlaces Oficiales
+
+| Recurso | URL |
+|---------|-----|
+| **Microsoft Foundry Portal** | https://ai.azure.com/ |
+| **Documentación Foundry** | https://learn.microsoft.com/es-mx/azure/foundry/ |
+| **Documentación Foundry (classic)** | https://learn.microsoft.com/es-mx/azure/foundry-classic/ |
+| **Semantic Kernel Docs** | https://learn.microsoft.com/en-us/semantic-kernel/ |
+| **SK Agent Framework** | https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/ |
+| **SK Process Framework** | https://learn.microsoft.com/en-us/semantic-kernel/frameworks/process/process-framework |
+| **SK Quick Start Guide** | https://learn.microsoft.com/en-us/semantic-kernel/get-started/quick-start-guide |
+| **SK GitHub Repo** | https://github.com/microsoft/semantic-kernel |
+| **Crear recurso Azure OpenAI** | https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource |
+| **Quickstart: Crear recursos Foundry** | https://learn.microsoft.com/en-us/azure/foundry/tutorials/quickstart-create-foundry-resources |
+| **SDK de Foundry para C#** | https://learn.microsoft.com/es-mx/azure/foundry/how-to/develop/sdk-overview?pivots=programming-language-csharp |
+| **Proyecto del Curso (GitHub)** | https://github.com/desarrollossoftware607/CursoSK-BankingBot |
+| **VS Code Extension para Foundry** | https://aka.ms/azureaifoundry/vscode |
+
+---
+
+## Resumen de Servicios Azure a Levantar
+
+| Servicio | Día | Propósito | Costo Estimado (Dev) |
+|----------|-----|-----------|---------------------|
+| **Foundry Resource (AIServices)** | Día 1 | Chat, Embedding, modelos base | Pay-as-you-go por tokens |
+| **Deployment gpt-4o-mini** | Día 1 | Modelo de chat principal | ~$0.15/1M input tokens |
+| **Deployment text-embedding-ada-002** | Día 6 | Generación de vectores para RAG | ~$0.10/1M tokens |
+| **Azure AI Search** | Día 7 | Vector Store para RAG (alternativa a in-memory) | Free tier disponible |
+| **Deployment gpt-4o-mini-transcribe** | Día 11 | Transcripción de audio | ~$0.006/min |
+| **Application Insights** | Día 18 | Monitoreo y telemetría | Free hasta 5GB/mes |
+| **Azure App Service** | Día 20 | Hosting de la API en producción | Desde $13/mes (B1) |
