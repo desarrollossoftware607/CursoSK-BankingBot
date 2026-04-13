@@ -1,4 +1,5 @@
 using Microsoft.SemanticKernel;
+using CursoSK.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,10 @@ else
 }
 
 builder.Services.AddSingleton(kernelBuilder.Build());
+
+// --- Servicios ---
+builder.Services.AddSingleton<BlogService>();
+builder.Services.AddSingleton<ChatSessionService>();
 
 var app = builder.Build();
 app.UseSwagger();
