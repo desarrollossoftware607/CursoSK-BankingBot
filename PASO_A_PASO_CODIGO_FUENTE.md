@@ -1,6 +1,6 @@
-# Paso a Paso — Sesión 3: Blog Generator + Chat History
+# Paso a Paso — Sesión 4: Chat Multimodal + Persistencia EF Core
 
-> **Rama Git:** `sesion/03`
+> **Rama Git:** `sesion/04`
 
 ---
 
@@ -8,189 +8,205 @@
 
 | Archivo | Acción |
 |---|---|
-| `Services/BlogService.cs` | **Crear** |
-| `Controllers/BlogController.cs` | **Crear** |
-| `Services/ChatSessionService.cs` | **Crear** |
-| `Controllers/ChatController.cs` | **Crear** |
-| `DTOs/Requests.cs` | Modificar (agregar DTOs) |
-| `Program.cs` | Modificar (registrar servicios) |
+| `Models/ChatModels.cs` | **Crear** |
+| `Data/AppDbContext.cs` | **Crear** |
+| `Controllers/ChatController.cs` | Modificar (agregar endpoint imagen) |
+| `Services/ChatSessionService.cs` | Modificar (agregar método imagen) |
+| `DTOs/Requests.cs` | Modificar (agregar DTO) |
+| `Program.cs` | Modificar (registrar EF Core) |
 
 ---
 
-## 1. Services/BlogService.cs
+## 1. Instalar paquetes NuGet adicionales
+
+```powershell
+dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 9.0.4
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.4
+```
+
+---
+
+## 2. Models/ChatModels.cs
 
 ```csharp
-using Microsoft.SemanticKernel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace CursoSK.Api.Services;
+namespace CursoSK.Api.Models;
 
-public class BlogService
+public class ChatSession
 {
-    private readonly Kernel _kernel;
-    public BlogService(Kernel kernel) => _kernel = kernel;
+    [Key] public int Id { get; set; }
+    [Required, MaxLength(100)] public string SessionId { get; set; } = string.Empty;
+    [MaxLength(200)] public string? Titulo { get; set; }
+    [MaxLength(100)] public string? UsuarioId { get; set; }
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+    public DateTime UltimaActividad { get; set; } = DateTime.UtcNow;
+    public bool Activa { get; set; } = true;
+    public List<ChatMessage> Mensajes { get; set; } = new();
+}
 
-    public async Task<string> GenerarContenidoBlog(string tema)
+public class ChatMessage
+{
+    [Key] public int Id { get; set; }
+    public int ChatSessionId { get; set; }
+    [Required, MaxLength(20)] public string Rol { get; set; } = "user";
+    [Required] public string Contenido { get; set; } = string.Empty;
+    [MaxLength(50)] public string? TipoContenido { get; set; } = "text";
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+    [ForeignKey(nameof(ChatSessionId))] public ChatSession? Session { get; set; }
+}
+
+public class PluginInvocationLog
+{
+    [Key] public int Id { get; set; }
+    [MaxLength(100)] public string PluginName { get; set; } = string.Empty;
+    [MaxLength(100)] public string FunctionName { get; set; } = string.Empty;
+    public string? Argumentos { get; set; }
+    public string? Resultado { get; set; }
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+    public int DuracionMs { get; set; }
+}
+
+public class ContenidoGenerado
+{
+    [Key] public int Id { get; set; }
+    [MaxLength(50)] public string Tipo { get; set; } = string.Empty;
+    [MaxLength(300)] public string Titulo { get; set; } = string.Empty;
+    public string Contenido { get; set; } = string.Empty;
+    public string? ImagenUrl { get; set; }
+    public string? AudioUrl { get; set; }
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+}
+```
+
+---
+
+## 3. Data/AppDbContext.cs
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using CursoSK.Api.Models;
+
+namespace CursoSK.Api.Data;
+
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<PluginInvocationLog> PluginLogs => Set<PluginInvocationLog>();
+    public DbSet<ContenidoGenerado> ContenidosGenerados => Set<ContenidoGenerado>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        var blogPrompt = $"""
-            Genera una publicación de blog detallada acerca de {tema}.
-            Debe incluir introducción, varios párrafos, code snippets si es necesario, y conclusión.
-            Separa cada sección con un encabezado.
-            Es OBLIGATORIO usar los siguientes bloques Gutenberg:
+        modelBuilder.Entity<ChatSession>().HasIndex(s => s.SessionId).IsUnique();
 
-            Para encabezado: <!-- wp:heading --><h2 class="wp-block-heading">TEXTO</h2><!-- /wp:heading -->
-            Para párrafo: <!-- wp:paragraph --><p>TEXTO</p><!-- /wp:paragraph -->
-            Para lista: <!-- wp:list --><ul class="wp-block-list"><li>ITEM</li></ul><!-- /wp:list -->
-            Para código: <!-- wp:code --><pre class="wp-block-code"><code>CÓDIGO</code></pre><!-- /wp:code -->
-            """;
-        var result = await _kernel.InvokePromptAsync(blogPrompt);
-        return result.ToString();
+        // Seed data
+        modelBuilder.Entity<ChatSession>().HasData(
+            new ChatSession { Id = 1, SessionId = "demo-session",
+                Titulo = "Sesión de demostración", UsuarioId = "demo",
+                FechaCreacion = new DateTime(2026, 4, 1, 8, 0, 0, DateTimeKind.Utc),
+                UltimaActividad = new DateTime(2026, 4, 1, 8, 30, 0, DateTimeKind.Utc) });
+
+        modelBuilder.Entity<ChatMessage>().HasData(
+            new ChatMessage { Id = 1, ChatSessionId = 1, Rol = "system",
+                Contenido = "Eres un asistente del curso de Semantic Kernel.",
+                Fecha = new DateTime(2026, 4, 1, 8, 0, 0, DateTimeKind.Utc) },
+            new ChatMessage { Id = 2, ChatSessionId = 1, Rol = "user",
+                Contenido = "¿Qué es Semantic Kernel?",
+                Fecha = new DateTime(2026, 4, 1, 8, 1, 0, DateTimeKind.Utc) },
+            new ChatMessage { Id = 3, ChatSessionId = 1, Rol = "assistant",
+                Contenido = "Semantic Kernel es un SDK open-source de Microsoft para integrar LLMs en aplicaciones.",
+                Fecha = new DateTime(2026, 4, 1, 8, 1, 30, DateTimeKind.Utc) });
     }
 }
 ```
 
 ---
 
-## 2. Controllers/BlogController.cs
+## 4. Agregar endpoint de imagen al ChatController
+
+Agregar este método al `ChatController` existente:
 
 ```csharp
-using Microsoft.AspNetCore.Mvc;
-using CursoSK.Api.DTOs;
-using CursoSK.Api.Services;
-
-namespace CursoSK.Api.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-[Tags("3️⃣ Blog — Sesión 3")]
-public class BlogController : ControllerBase
+[HttpPost("{sessionId}/imagen")]
+public async Task<IActionResult> EnviarImagen(string sessionId, [FromBody] ChatImagenRequest request)
 {
-    private readonly BlogService _blogService;
-    public BlogController(BlogService blogService) => _blogService = blogService;
-
-    [HttpPost("generar")]
-    public async Task<IActionResult> GenerarBlogPost([FromBody] BlogRequest request)
-    {
-        var contenido = await _blogService.GenerarContenidoBlog(request.Tema);
-        return Ok(new { tema = request.Tema, contenidoHtml = contenido });
-    }
+    var respuesta = await _chatService.EnviarMensajeConImagen(
+        sessionId, request.Pregunta ?? "Describe esta imagen en detalle", request.ImagenUrl);
+    return Ok(new { sessionId, respuesta });
 }
 ```
 
 ---
 
-## 3. Services/ChatSessionService.cs
+## 5. Agregar método al ChatSessionService
+
+Agregar este método al `ChatSessionService` existente:
 
 ```csharp
-using System.Collections.Concurrent;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-
-namespace CursoSK.Api.Services;
-
-public class ChatSessionService
+public async Task<string> EnviarMensajeConImagen(string sessionId, string pregunta, string imagenUrl)
 {
-    private readonly ConcurrentDictionary<string, ChatHistory> _sessions = new();
-    private readonly Kernel _kernel;
-    public ChatSessionService(Kernel kernel) => _kernel = kernel;
+    var history = _sessions.GetOrAdd(sessionId, _ =>
+        new ChatHistory("Eres un asistente multimodal capaz de analizar imágenes."));
 
-    public async Task<string> EnviarMensaje(string sessionId, string mensaje)
-    {
-        var history = _sessions.GetOrAdd(sessionId, _ =>
-            new ChatHistory("Eres un asistente útil que recuerda toda la conversación."));
-        history.AddUserMessage(mensaje);
-        var chatService = _kernel.GetRequiredService<IChatCompletionService>();
-        var response = await chatService.GetChatMessageContentAsync(history);
-        history.AddAssistantMessage(response.Content!);
-        return response.Content!;
-    }
+    var contents = new ChatMessageContentItemCollection();
+    contents.Add(new TextContent(pregunta));
+    contents.Add(new ImageContent(new Uri(imagenUrl)));
+    history.AddUserMessage(contents);
 
-    public ChatHistory? ObtenerHistorial(string sessionId) =>
-        _sessions.GetValueOrDefault(sessionId);
-
-    public bool EliminarSesion(string sessionId) =>
-        _sessions.TryRemove(sessionId, out _);
-
-    public IEnumerable<string> ListarSesiones() => _sessions.Keys;
+    var chatService = _kernel.GetRequiredService<IChatCompletionService>();
+    var response = await chatService.GetChatMessageContentAsync(history);
+    history.AddAssistantMessage(response.Content!);
+    return response.Content!;
 }
 ```
 
 ---
 
-## 4. Controllers/ChatController.cs
+## 6. Agregar DTO a DTOs/Requests.cs
 
 ```csharp
-using Microsoft.AspNetCore.Mvc;
-using CursoSK.Api.DTOs;
-using CursoSK.Api.Services;
-
-namespace CursoSK.Api.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-[Tags("4️⃣ Chat — Sesiones 3-4")]
-public class ChatController : ControllerBase
-{
-    private readonly ChatSessionService _chatService;
-    public ChatController(ChatSessionService chatService) => _chatService = chatService;
-
-    [HttpPost("{sessionId}/mensaje")]
-    public async Task<IActionResult> EnviarMensaje(string sessionId, [FromBody] ChatMensajeRequest request)
-    {
-        var respuesta = await _chatService.EnviarMensaje(sessionId, request.Mensaje);
-        return Ok(new { sessionId, respuesta });
-    }
-
-    [HttpGet("{sessionId}/historial")]
-    public IActionResult ObtenerHistorial(string sessionId)
-    {
-        var history = _chatService.ObtenerHistorial(sessionId);
-        if (history == null) return NotFound("Sesión no encontrada");
-        return Ok(history.Select(m => new { rol = m.Role.Label, contenido = m.Content }));
-    }
-
-    [HttpGet("sesiones")]
-    public IActionResult ListarSesiones() => Ok(_chatService.ListarSesiones());
-
-    [HttpDelete("{sessionId}")]
-    public IActionResult EliminarSesion(string sessionId)
-    {
-        _chatService.EliminarSesion(sessionId);
-        return Ok(new { mensaje = "Sesión eliminada" });
-    }
-}
+public record ChatImagenRequest(string ImagenUrl, string? Pregunta);
 ```
 
 ---
 
-## 5. Agregar DTOs a DTOs/Requests.cs
-
-Agregar al final del archivo:
-
-```csharp
-public record BlogRequest(string Tema);
-public record ChatMensajeRequest(string Mensaje);
-```
-
----
-
-## 6. Registrar servicios en Program.cs
+## 7. Registrar EF Core en Program.cs
 
 Agregar antes de `builder.Build()`:
 
 ```csharp
-builder.Services.AddSingleton<BlogService>();
-builder.Services.AddSingleton<ChatSessionService>();
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Data Source=cursosk.db"));
+```
+
+Agregar después de `builder.Build()`:
+
+```csharp
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
+```
+
+No olvidar el `using` al inicio de Program.cs:
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using CursoSK.Api.Data;
 ```
 
 ---
 
-## 7. Probar
+## 8. Probar
 
 ```powershell
 dotnet run
 ```
 
-- `POST /api/blog/generar` → `{ "tema": "Semantic Kernel en .NET" }`
-- `POST /api/chat/session1/mensaje` → `{ "mensaje": "Mi nombre es José" }`
-- `POST /api/chat/session1/mensaje` → `{ "mensaje": "¿Cuál es mi nombre?" }` → ¡Recuerda!
-- `GET /api/chat/session1/historial`
+- `POST /api/chat/session1/imagen` → `{ "imagenUrl": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png", "pregunta": "¿Qué ves en esta imagen?" }`

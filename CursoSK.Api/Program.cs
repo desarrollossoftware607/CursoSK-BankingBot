@@ -1,4 +1,6 @@
 using Microsoft.SemanticKernel;
+using Microsoft.EntityFrameworkCore;
+using CursoSK.Api.Data;
 using CursoSK.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +12,10 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "CursoSK.Api", Version = "v1",
         Description = "API del curso Máster en Semantic Kernel — crece sesión a sesión" });
 });
+
+// --- EF Core + SQLite ---
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // --- Semantic Kernel ---
 var llmProvider = builder.Configuration["LLMSettings:Provider"]?.ToLower() ?? "azure";
@@ -36,6 +42,13 @@ builder.Services.AddSingleton<BlogService>();
 builder.Services.AddSingleton<ChatSessionService>();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapControllers();
