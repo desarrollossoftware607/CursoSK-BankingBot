@@ -8,16 +8,15 @@
 
 ## Descripción
 
-Curso práctico que cubre desde los fundamentos de **Microsoft Semantic Kernel** hasta la construcción de **agentes de IA completos** desplegados en Azure. Se trabajan **dos proyectos reales** a lo largo de las 10 sesiones, cada uno con un enfoque distinto.
+Curso práctico que cubre desde los fundamentos de **Microsoft Semantic Kernel** hasta la construcción de **agentes de IA completos** desplegados en Azure. Se trabaja **un único proyecto Web API** que crece sesión a sesión, acumulando funcionalidad.
 
 ---
 
-## Proyectos
+## Proyecto
 
 | Proyecto | Descripción | Puerto |
 |---|---|---|
-| **[CursoSK.Api](CursoSK.Api/)** | API genérica de IA — Blog, Chat, Streaming, Plugins, Prompting, RAG | `5192` |
-| **[CursoSK.BankingBot](CursoSK.BankingBot/)** | Bot bancario especializado — Onboarding, Préstamos, Legal, Audio, RAG leyes | `5290` |
+| **[CursoSK.Api](CursoSK.Api/)** | API Web de IA — Kernel, Streaming, Blog, Chat, Plugins, Prompting, RAG | `5192` |
 
 ---
 
@@ -42,6 +41,7 @@ Cada rama es **acumulativa** — contiene todo el código de las sesiones anteri
 ```bash
 # Cambiar a una sesión específica
 git checkout sesion/05
+dotnet build CursoSK.Api/CursoSK.Api.csproj
 ```
 
 ---
@@ -67,37 +67,27 @@ cd CursoSK-BankingBot
 
 ### 2. Configurar credenciales
 
-Cada proyecto usa `appsettings.json` con la sección `LLMSettings`. Configura tus credenciales de Azure OpenAI:
+Edita `CursoSK.Api/appsettings.json` con tus credenciales de Azure OpenAI:
 
-**CursoSK.Api/appsettings.json:**
 ```json
 {
   "LLMSettings": {
-    "Provider": "AzureOpenAI",
+    "Provider": "azure",
     "AzureOpenAI": {
+      "DeploymentName": "gpt-35-turbo-16k",
       "Endpoint": "https://TU-RECURSO.openai.azure.com/",
-      "ApiKey": "TU-API-KEY",
-      "ChatDeployment": "gpt-35-turbo-16k",
-      "EmbeddingDeployment": "text-embedding-3-small"
+      "ApiKey": "TU-API-KEY"
     }
   }
 }
 ```
 
-**CursoSK.BankingBot/appsettings.json:** Configuración similar en la sección `AzureOpenAI`.
-
-### 3. Ejecutar un proyecto
+### 3. Ejecutar
 
 ```bash
-# Proyecto genérico (API)
 cd CursoSK.Api
 dotnet run
 # Abrir: http://localhost:5192/swagger
-
-# Bot bancario
-cd CursoSK.BankingBot
-dotnet run
-# Abrir: http://localhost:5290/swagger
 ```
 
 ---
@@ -117,15 +107,15 @@ Los scripts PowerShell en `Scripts/Azure/` permiten crear todos los recursos nec
 | [`10-foundry-setup.ps1`](Scripts/Azure/10-foundry-setup.ps1) | Microsoft Foundry — guía de configuración |
 
 ```powershell
-# Ejemplo: crear todos los recursos desde cero
+# Crear todos los recursos desde cero
 cd Scripts/Azure
-. .\00-variables.ps1       # Cargar variables
+. .\00-variables.ps1
 .\01-crear-recurso-openai.ps1
 .\02-crear-deployment-whisper.ps1
 .\07-crear-deployment-embedding.ps1
 ```
 
-> **Nota:** Cada script incluye también instrucciones paso a paso para crear los mismos recursos desde el **Portal de Azure** (como comentarios en el código).
+> **Nota:** Cada script incluye también instrucciones paso a paso para crear los mismos recursos desde el **Portal de Azure**.
 
 ---
 
@@ -143,47 +133,60 @@ cd Scripts/Azure
 
 ```
 Curso Agentes/
-├── CursoSK.Api/                    # Proyecto 1: API genérica de IA
-│   ├── Controllers/                # 7 controllers (Kernel, Multimodal, Blog, Chat, Agent, Prompting, RAG)
-│   ├── Services/                   # BlogService, ChatSessionService, VectorStoreService
-│   ├── Plugins/                    # ClimaPlugin, MathPlugin
-│   ├── Filters/                    # LoggingFilter (FunctionInvocationFilter)
-│   ├── Models/                     # Entidades EF Core
-│   ├── DTOs/                       # Request records
-│   ├── Data/                       # AppDbContext (SQLite)
-│   ├── Prompts/                    # Templates YAML (Handlebars)
-│   └── Program.cs                  # Startup: SK + EF Core + Swagger
-│
-├── CursoSK.BankingBot/             # Proyecto 2: Bot bancario
-│   ├── Controllers/                # Onboarding, Chat, Legal, Audio, RAG, Prestamos
-│   ├── Services/                   # ConversationService, LegalIndexingService, VectorStoreService
-│   ├── Plugins/                    # OnboardingPlugin, CalculadoraFinancieraPlugin, LegalPlugin
-│   ├── Docs/Leyes/                 # Leyes hondureñas para RAG
-│   └── Program.cs
-│
-├── Scripts/Azure/                  # Scripts PowerShell para crear recursos Azure
-│
+├── CursoSK.Api/
+│   ├── Controllers/
+│   │   ├── KernelController.cs        (Sesión 1)
+│   │   ├── MultimodalController.cs    (Sesión 2)
+│   │   ├── BlogController.cs          (Sesión 3)
+│   │   ├── ChatController.cs          (Sesiones 3-4)
+│   │   ├── AgentController.cs         (Sesiones 5-6)
+│   │   ├── PromptingController.cs     (Sesión 7)
+│   │   └── RAGController.cs           (Sesiones 8-9)
+│   ├── Services/
+│   │   ├── BlogService.cs             (Sesión 3)
+│   │   ├── ChatSessionService.cs      (Sesión 3)
+│   │   └── VectorStoreService.cs      (Sesión 8)
+│   ├── Plugins/
+│   │   ├── ClimaPlugin.cs             (Sesión 5)
+│   │   └── MathPlugin.cs              (Sesión 5)
+│   ├── Filters/
+│   │   └── LoggingFilter.cs           (Sesión 6)
+│   ├── Models/
+│   │   ├── ChatModels.cs              (Sesión 4)
+│   │   └── DocumentoVectorial.cs      (Sesión 8)
+│   ├── Data/
+│   │   └── AppDbContext.cs            (Sesión 4)
+│   ├── DTOs/
+│   │   └── Requests.cs
+│   ├── Prompts/
+│   │   └── ClasificarIntencion.yaml   (Sesión 7)
+│   ├── Program.cs
+│   └── appsettings.json
+├── Scripts/
+│   └── Azure/
+│       ├── 00-variables.ps1
+│       ├── 01-crear-recurso-openai.ps1
+│       ├── 02-crear-deployment-whisper.ps1
+│       ├── 07-crear-deployment-embedding.ps1
+│       ├── 09-crear-ai-search.ps1
+│       ├── 10-deploy-app-service.ps1
+│       └── 10-foundry-setup.ps1
 ├── CURSO_UNIFICADO_JORNALIZACION.md
 ├── GUION_DIAPOSITIVAS_IA.md
 ├── PASO_A_PASO_CODIGO_FUENTE.md
-└── README.md                       # ← Estás aquí
+└── README.md
 ```
 
 ---
 
 ## Tecnologías
 
-- **Microsoft Semantic Kernel** 1.48.0 — Orquestación de IA
-- **ASP.NET Core 9.0** — Web API REST
-- **Entity Framework Core** 9.0 + SQLite — Persistencia
-- **Swashbuckle** 6.9.0 — Swagger UI
-- **Azure OpenAI** — GPT-3.5/4, DALL-E, Whisper, Embeddings
-- **Azure AI Search** — Búsqueda vectorial (opcional)
-- **Azure App Service** — Hosting en producción
-- **Microsoft Foundry** — Playground, guardrails, Agent Service
-
----
-
-## Licencia
-
-Material educativo. Uso autorizado exclusivamente para los participantes del curso.
+| Tecnología | Versión |
+|---|---|
+| .NET | 9.0 |
+| Semantic Kernel | 1.48.0 |
+| EF Core SQLite | 9.0.4 |
+| Swashbuckle | 6.9.0 |
+| System.Numerics.Tensors | 9.0.1 |
+| Azure OpenAI | GPT-3.5/4, DALL-E 3, Whisper, TTS |
+| Microsoft Foundry | Portal ai.azure.com |

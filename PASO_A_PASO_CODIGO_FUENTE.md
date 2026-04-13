@@ -1,24 +1,22 @@
-# Guía Paso a Paso — Código Fuente de Ambos Proyectos
+# Guía Paso a Paso — Código Fuente del Proyecto
 
-## CursoSK.Api + CursoSK.BankingBot — Organizado por Sesión
+## CursoSK.Api — Organizado por Sesión
 
 > **Alineado con:** `CURSO_UNIFICADO_JORNALIZACION.md` — 10 sesiones / 30 horas
 
-Esta guía es para ir **copiando y pegando código** sesión por sesión. Al final tendrás dos APIs completas con ~30 endpoints en total.
+Esta guía es para ir **copiando y pegando código** sesión por sesión. Al final tendrás una API completa con ~15 endpoints.
 
 | Proyecto | Puerto | Descripción |
 |---|---|---|
-| **CursoSK.Api** | 5192 | API genérica de IA (Blog, Chat, Plugins, Prompting, RAG) |
-| **CursoSK.BankingBot** | 5290 | Bot bancario (Onboarding, Legal, Audio, RAG leyes) |
+| **CursoSK.Api** | 5192 | API Web de IA que crece sesión a sesión |
 
 ---
 
-## PASO 0 — Crear Ambos Proyectos y Estructura Inicial
+## PASO 0 — Crear el Proyecto y Estructura Inicial
 
-### 0.1 Crear los proyectos desde terminal
+### 0.1 Crear el proyecto desde terminal
 
 ```bash
-# Proyecto 1: API genérica
 dotnet new webapi -n CursoSK.Api --use-controllers
 cd CursoSK.Api
 
@@ -31,23 +29,12 @@ dotnet add package Microsoft.SemanticKernel.PromptTemplates.Handlebars --version
 dotnet add package Microsoft.SemanticKernel.Yaml --version 1.48.0
 dotnet add package Microsoft.SemanticKernel.Plugins.Core --prerelease
 dotnet add package System.Numerics.Tensors --version 9.0.1
-
-cd ..
-
-# Proyecto 2: Bot bancario
-dotnet new webapi -n CursoSK.BankingBot --use-controllers
-cd CursoSK.BankingBot
-
-dotnet add package Microsoft.SemanticKernel --version 1.48.0
-dotnet add package Swashbuckle.AspNetCore --version 6.9.0
-dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 9.0.4
-dotnet add package System.Numerics.Tensors --version 9.0.1
 ```
 
-### 0.2 Estructura de carpetas (ambos proyectos)
+### 0.2 Estructura de carpetas
 
 ```powershell
-# Ejecutar dentro de cada proyecto
+# Ejecutar dentro del proyecto
 "Controllers","Services","Plugins","Filters","Models","Data","DTOs","Prompts" | ForEach-Object { New-Item -ItemType Directory -Name $_ -Force }
 ```
 
@@ -60,8 +47,6 @@ Eliminar los archivos generados por `dotnet new webapi` que no necesitamos:
 ---
 
 ## SESIÓN 1 — Fundamentos SK + Setup Azure
-
-### CursoSK.Api
 
 #### 1.1 — appsettings.json
 
@@ -188,36 +173,6 @@ public class KernelController : ControllerBase
 
 **Probar:** `dotnet run` → http://localhost:5192/swagger → `POST /api/kernel/prompt`
 
-### CursoSK.BankingBot
-
-#### 1.5 — Program.cs (BankingBot — versión inicial)
-
-```csharp
-using Microsoft.SemanticKernel;
-
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new() { Title = "CursoSK.BankingBot", Version = "v1" });
-});
-
-var kernelBuilder = Kernel.CreateBuilder();
-kernelBuilder.AddAzureOpenAIChatCompletion(
-    deploymentName: builder.Configuration["AzureOpenAI:DeploymentName"]!,
-    endpoint: builder.Configuration["AzureOpenAI:Endpoint"]!,
-    apiKey: builder.Configuration["AzureOpenAI:ApiKey"]!);
-
-builder.Services.AddSingleton(kernelBuilder.Build());
-
-var app = builder.Build();
-app.UseSwagger();
-app.UseSwaggerUI();
-app.MapControllers();
-app.Run();
-```
-
 ### Azure Setup
 
 Ejecutar: `Scripts/Azure/01-crear-recurso-openai.ps1`
@@ -225,8 +180,6 @@ Ejecutar: `Scripts/Azure/01-crear-recurso-openai.ps1`
 ---
 
 ## SESIÓN 2 — Servicios Multimodales
-
-### CursoSK.Api
 
 #### 2.1 — Controllers/MultimodalController.cs
 
@@ -260,13 +213,18 @@ public class MultimodalController : ControllerBase
 }
 ```
 
+#### 2.2 — Registrar servicios multimodales en Program.cs
+
+```csharp
+// Agregar al kernelBuilder (DESPUÉS de AddAzureOpenAIChatCompletion):
+#pragma warning disable SKEXP0010
+kernelBuilder.AddOpenAITextToImage(apiKey: "...", modelId: "dall-e-3");
+kernelBuilder.AddOpenAITextToAudio(apiKey: "...", modelId: "tts-1");
+kernelBuilder.AddOpenAIAudioToText(apiKey: "...", modelId: "whisper-1");
+#pragma warning restore SKEXP0010
+```
+
 **Probar:** `POST /api/multimodal/stream` → streaming token por token
-
-### CursoSK.BankingBot
-
-#### 2.2 — Controllers/AudioController.cs (BankingBot)
-
-Agregar endpoint de transcripción de audio con Whisper para transcribir llamadas de servicio al cliente.
 
 ### Azure Setup
 
@@ -275,8 +233,6 @@ Ejecutar: `Scripts/Azure/02-crear-deployment-whisper.ps1`
 ---
 
 ## SESIÓN 3 — Blog Generator + Chat History
-
-### CursoSK.Api
 
 #### 3.1 — Services/BlogService.cs
 
@@ -441,8 +397,6 @@ builder.Services.AddSingleton<ChatSessionService>();
 
 ## SESIÓN 4 — Chat Multimodal + EF Core
 
-### CursoSK.Api
-
 #### 4.1 — Models/ChatModels.cs
 
 ```csharp
@@ -596,8 +550,6 @@ using (var scope = app.Services.CreateScope())
 
 ## SESIÓN 5 — Plugins y Function Calling
 
-### CursoSK.Api
-
 #### 5.1 — Plugins/ClimaPlugin.cs
 
 ```csharp
@@ -713,25 +665,9 @@ kernelBuilder.Plugins.AddFromType<MathPlugin>("Matematica");
 - `POST /api/agent/consultar` → `{ "prompt": "¿Cuánto es 15 × 7 + 3?" }`
 - `GET /api/agent/plugins` → listar todas las funciones disponibles
 
-### CursoSK.BankingBot
-
-#### 5.5 — Plugins/OnboardingPlugin.cs (BankingBot)
-
-Crear plugin con funciones: `verificar_identidad`, `crear_cuenta`, `consultar_productos`.
-
-#### 5.6 — Plugins/CalculadoraFinancieraPlugin.cs (BankingBot)
-
-Crear plugin con funciones: `calcular_cuota_mensual`, `calcular_interes_total`.
-
-#### 5.7 — Controllers/OnboardingController.cs (BankingBot)
-
-Endpoint `POST /api/onboarding/iniciar` con Function Calling automático.
-
 ---
 
 ## SESIÓN 6 — Plugins Avanzados + Filtros
-
-### CursoSK.Api
 
 #### 6.1 — Filters/LoggingFilter.cs
 
@@ -771,17 +707,9 @@ public class LoggingFilter : IFunctionInvocationFilter
 kernelBuilder.Services.AddSingleton<IFunctionInvocationFilter, LoggingFilter>();
 ```
 
-### CursoSK.BankingBot
-
-#### 6.3 — Plugins/LegalPlugin.cs, Filters/AuditFilter.cs, Controllers/PrestamosController.cs, Controllers/LegalController.cs
-
-Crear plugin legal con `HttpClient` inyectado, filtro de auditoría, y controladores de préstamos y consultas legales.
-
 ---
 
 ## SESIÓN 7 — Prompting Avanzado + Templates YAML
-
-### CursoSK.Api
 
 #### 7.1 — Controllers/PromptingController.cs
 
@@ -900,8 +828,6 @@ Ejecutar: `Scripts/Azure/07-crear-deployment-embedding.ps1`
 
 ## SESIÓN 8 — Intro Embeddings + VectorStoreService
 
-### CursoSK.Api
-
 #### 8.1 — Models/DocumentoVectorial.cs
 
 ```csharp
@@ -913,7 +839,6 @@ public class DocumentoVectorial
     public string Titulo { get; set; } = string.Empty;
     public string Contenido { get; set; } = string.Empty;
     public string Categoria { get; set; } = string.Empty;
-    public string? Fuente { get; set; }
     public ReadOnlyMemory<float>? Embedding { get; set; }
 }
 ```
@@ -923,35 +848,37 @@ public class DocumentoVectorial
 ```csharp
 using System.Collections.Concurrent;
 using System.Numerics.Tensors;
-using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 using CursoSK.Api.Models;
 
 namespace CursoSK.Api.Services;
 
-#pragma warning disable SKEXP0001
+#pragma warning disable SKEXP0010
+
 public class VectorStoreService
 {
     private readonly ConcurrentDictionary<string, DocumentoVectorial> _store = new();
     private readonly ITextEmbeddingGenerationService? _embeddingService;
     private readonly ILogger<VectorStoreService> _logger;
 
-    public VectorStoreService(Kernel kernel, ILogger<VectorStoreService> logger)
+    public VectorStoreService(IServiceProvider sp, ILogger<VectorStoreService> logger)
     {
-        _embeddingService = kernel.Services.GetService<ITextEmbeddingGenerationService>();
+        _embeddingService = sp.GetService<ITextEmbeddingGenerationService>();
         _logger = logger;
     }
 
-    public async Task<string> IndexarDocumento(string titulo, string contenido, string categoria, string? fuente = null)
+    public async Task<string> IndexarDocumento(string titulo, string contenido, string categoria)
     {
         if (_embeddingService == null)
-            throw new InvalidOperationException("Embedding service no configurado.");
+            throw new InvalidOperationException("Servicio de embeddings no configurado.");
 
         var embedding = await _embeddingService.GenerateEmbeddingAsync(contenido);
         var doc = new DocumentoVectorial
         {
-            Titulo = titulo, Contenido = contenido,
-            Categoria = categoria, Fuente = fuente, Embedding = embedding
+            Titulo = titulo,
+            Contenido = contenido,
+            Categoria = categoria,
+            Embedding = embedding
         };
         _store.TryAdd(doc.Id, doc);
         _logger.LogInformation("Documento indexado: {Titulo} ({Id})", titulo, doc.Id);
@@ -961,7 +888,7 @@ public class VectorStoreService
     public async Task<List<(DocumentoVectorial Doc, double Score)>> BuscarSimilares(string consulta, int top = 3)
     {
         if (_embeddingService == null)
-            throw new InvalidOperationException("Embedding service no configurado.");
+            throw new InvalidOperationException("Servicio de embeddings no configurado.");
 
         var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(consulta);
         return _store.Values
@@ -975,31 +902,28 @@ public class VectorStoreService
 
     public int Count => _store.Count;
 }
-#pragma warning restore SKEXP0001
+
+#pragma warning restore SKEXP0010
 ```
 
-#### 8.3 — Registrar embedding service en Program.cs
+#### 8.3 — Registrar servicio de embeddings en Program.cs
 
 ```csharp
-// Agregar al kernelBuilder (si hay embedding configurado):
-var embeddingDeployment = builder.Configuration["LLMSettings:Embedding:DeploymentName"];
-if (!string.IsNullOrEmpty(embeddingDeployment))
-{
-    kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
-        deploymentName: embeddingDeployment,
-        endpoint: builder.Configuration["LLMSettings:Embedding:Endpoint"]!,
-        apiKey: builder.Configuration["LLMSettings:Embedding:ApiKey"]!);
-}
+// Agregar al kernelBuilder:
+#pragma warning disable SKEXP0010
+kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
+    deploymentName: builder.Configuration["LLMSettings:Embedding:DeploymentName"]!,
+    endpoint: builder.Configuration["LLMSettings:Embedding:Endpoint"]!,
+    apiKey: builder.Configuration["LLMSettings:Embedding:ApiKey"]!);
+#pragma warning restore SKEXP0010
 
-// Registrar servicio:
+// Agregar al DI:
 builder.Services.AddSingleton<VectorStoreService>();
 ```
 
 ---
 
-## SESIÓN 9 — RAG Completo
-
-### CursoSK.Api
+## SESIÓN 9 — RAG Completo + Agent Framework
 
 #### 9.1 — Controllers/RAGController.cs
 
@@ -1028,8 +952,7 @@ public class RAGController : ControllerBase
     [HttpPost("indexar")]
     public async Task<IActionResult> Indexar([FromBody] IndexarDocumentoRequest request)
     {
-        var id = await _vectorStore.IndexarDocumento(
-            request.Titulo, request.Contenido, request.Categoria, request.Fuente);
+        var id = await _vectorStore.IndexarDocumento(request.Titulo, request.Contenido, request.Categoria);
         return Ok(new { id, mensaje = "Documento indexado", totalDocumentos = _vectorStore.Count });
     }
 
@@ -1039,8 +962,12 @@ public class RAGController : ControllerBase
         var resultados = await _vectorStore.BuscarSimilares(request.Consulta, request.Top);
         return Ok(resultados.Select(r => new
         {
-            titulo = r.Doc.Titulo, contenido = r.Doc.Contenido,
-            categoria = r.Doc.Categoria, score = Math.Round(r.Score, 4)
+            titulo = r.Doc.Titulo,
+            categoria = r.Doc.Categoria,
+            score = r.Score,
+            contenido = r.Doc.Contenido.Length > 200
+                ? r.Doc.Contenido[..200] + "..."
+                : r.Doc.Contenido
         }));
     }
 
@@ -1069,61 +996,59 @@ public class RAGController : ControllerBase
     {
         var faqs = new[]
         {
-            ("¿Qué es Semantic Kernel?", "Semantic Kernel es un SDK open-source de Microsoft para integrar LLMs en aplicaciones.", "faq"),
-            ("¿Qué es RAG?", "RAG (Retrieval-Augmented Generation) combina búsqueda vectorial con generación de texto.", "faq"),
-            ("¿Qué es Function Calling?", "Function Calling permite al LLM invocar funciones C# registradas como plugins.", "faq"),
+            ("¿Qué es Semantic Kernel?", "Semantic Kernel es un SDK open-source de Microsoft que permite integrar modelos de lenguaje (LLMs) en aplicaciones C#, Python y Java. Actúa como orquestador central coordinando IA, plugins y memoria.", "SK"),
+            ("¿Qué es RAG?", "RAG (Retrieval-Augmented Generation) es un patrón que combina búsqueda vectorial con generación de texto. Primero recupera fragmentos relevantes de una base de conocimiento, luego los inyecta como contexto del prompt para que el LLM responda con información fundamentada.", "RAG"),
+            ("¿Qué es un embedding?", "Un embedding es una representación numérica (vector) del significado de un texto. Permite medir la similaridad semántica entre textos usando métricas como la similaridad coseno.", "Embeddings"),
         };
-        foreach (var (titulo, contenido, cat) in faqs)
-            await _vectorStore.IndexarDocumento(titulo, contenido, cat, "FAQ del curso");
-        return Ok(new { mensaje = $"{faqs.Length} FAQs indexadas", total = _vectorStore.Count });
+
+        foreach (var (titulo, contenido, categoria) in faqs)
+            await _vectorStore.IndexarDocumento(titulo, contenido, categoria);
+
+        return Ok(new { mensaje = $"{faqs.Length} FAQs indexados", total = _vectorStore.Count });
     }
 }
 ```
 
-#### 9.2 — Agregar DTOs
+#### 9.2 — Agregar DTOs para RAG (en DTOs/Requests.cs)
 
 ```csharp
-// DTOs/Requests.cs — agregar:
-public record IndexarDocumentoRequest(string Titulo, string Contenido, string Categoria, string? Fuente);
+// Agregar a DTOs/Requests.cs:
+public record IndexarDocumentoRequest(string Titulo, string Contenido, string Categoria);
 public record BusquedaSemanticaRequest(string Consulta, int Top = 3);
 ```
 
-**Probar RAG:**
+**Probar:**
 1. `POST /api/rag/seed` → cargar FAQs de ejemplo
 2. `POST /api/rag/buscar` → `{ "consulta": "¿Qué es Semantic Kernel?", "top": 3 }`
 3. `POST /api/rag/consultar` → `{ "consulta": "¿Qué es RAG y para qué sirve?" }`
 
-### CursoSK.BankingBot
+### Azure Setup (opcional)
 
-#### 9.3 — RAGController (BankingBot) + LegalIndexingService
-
-Crear RAGController con `/indexar/leyes` que lee archivos de `Docs/Leyes/*.txt`, divide en chunks y los indexa. Crear LegalController con `/consultar/rag` para consultas legales con RAG.
-
-### Azure Setup
-
-Ejecutar (opcional): `Scripts/Azure/09-crear-ai-search.ps1`
+Ejecutar: `Scripts/Azure/09-crear-ai-search.ps1`
 
 ---
 
-## SESIÓN 10 — Deploy a Azure + Foundry
+## SESIÓN 10 — Deployment Azure + Foundry
 
-### Deploy
+#### 10.1 — Deploy a Azure App Service
 
-Ejecutar: `Scripts/Azure/10-deploy-app-service.ps1`
+```powershell
+cd Scripts/Azure
+.\10-deploy-app-service.ps1
+```
 
-El script:
-1. Pregunta qué proyecto desplegar (CursoSK.Api o BankingBot)
-2. Ejecuta `dotnet publish -c Release`
-3. Crea zip del output
-4. Crea App Service Plan + Web App en Azure
-5. Configura variables de entorno (LLMSettings)
-6. Ejecuta `az webapp deploy --type zip`
+El script ejecuta:
+1. `dotnet clean` + `dotnet publish -c Release`
+2. Crea zip del output
+3. Crea App Service Plan + Web App
+4. Configura variables de entorno (LLMSettings)
+5. Ejecuta `az webapp deploy --type zip`
 
-### Foundry
+#### 10.2 — Configurar Microsoft Foundry
 
-Seguir instrucciones en: `Scripts/Azure/10-foundry-setup.ps1`
+Seguir la guía en: `Scripts/Azure/10-foundry-setup.ps1`
 
-### Merge a main
+#### 10.3 — Merge a main
 
 ```bash
 git checkout main
@@ -1134,17 +1059,111 @@ git push origin main --tags
 
 ---
 
-## Resumen de Archivos por Sesión
+## Program.cs — Versión Final Completa (Sesión 10)
 
-| Sesión | Archivos CursoSK.Api | Archivos CursoSK.BankingBot |
-|---|---|---|
-| **1** | Program.cs, KernelController.cs, Requests.cs, appsettings.json | Program.cs, appsettings.json |
-| **2** | MultimodalController.cs | AudioController.cs |
-| **3** | BlogService.cs, BlogController.cs, ChatSessionService.cs, ChatController.cs | ConversationService.cs, ChatController.cs |
-| **4** | ChatModels.cs, AppDbContext.cs, ChatController (+imagen) | Models/*.cs, BankingDbContext.cs |
-| **5** | ClimaPlugin.cs, MathPlugin.cs, AgentController.cs | OnboardingPlugin.cs, CalculadoraFinancieraPlugin.cs, OnboardingController.cs |
-| **6** | LoggingFilter.cs | LegalPlugin.cs, AuditFilter.cs, PrestamosController.cs, LegalController.cs |
-| **7** | PromptingController.cs, ClasificarIntencion.yaml | ClasificarIntencion.yaml, AnalisisDocumento.yaml |
-| **8** | DocumentoVectorial.cs, VectorStoreService.cs | VectorStoreService.cs, DocumentoVectorial.cs |
-| **9** | RAGController.cs | RAGController.cs, LegalIndexingService.cs, Docs/Leyes/*.txt |
-| **10** | appsettings.Production.json | — |
+```csharp
+using Microsoft.SemanticKernel;
+using Microsoft.EntityFrameworkCore;
+using CursoSK.Api.Plugins;
+using CursoSK.Api.Filters;
+using CursoSK.Api.Services;
+using CursoSK.Api.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "CursoSK.Api", Version = "v1" });
+});
+
+// Semantic Kernel
+var llmProvider = builder.Configuration["LLMSettings:Provider"]?.ToLower() ?? "azure";
+var kernelBuilder = Kernel.CreateBuilder();
+
+if (llmProvider == "openai")
+{
+    kernelBuilder.AddOpenAIChatCompletion(
+        modelId: builder.Configuration["LLMSettings:OpenAI:ModelId"]!,
+        apiKey: builder.Configuration["LLMSettings:OpenAI:ApiKey"]!);
+}
+else
+{
+    kernelBuilder.AddAzureOpenAIChatCompletion(
+        deploymentName: builder.Configuration["LLMSettings:AzureOpenAI:DeploymentName"]!,
+        endpoint: builder.Configuration["LLMSettings:AzureOpenAI:Endpoint"]!,
+        apiKey: builder.Configuration["LLMSettings:AzureOpenAI:ApiKey"]!);
+}
+
+// Servicios multimodales (Sesión 2)
+#pragma warning disable SKEXP0010
+kernelBuilder.AddOpenAITextToImage(
+    apiKey: builder.Configuration["LLMSettings:OpenAI:ApiKey"]!, modelId: "dall-e-3");
+kernelBuilder.AddOpenAITextToAudio(
+    apiKey: builder.Configuration["LLMSettings:OpenAI:ApiKey"]!, modelId: "tts-1");
+kernelBuilder.AddOpenAIAudioToText(
+    apiKey: builder.Configuration["LLMSettings:OpenAI:ApiKey"]!, modelId: "whisper-1");
+
+// Embeddings (Sesión 8)
+kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
+    deploymentName: builder.Configuration["LLMSettings:Embedding:DeploymentName"]!,
+    endpoint: builder.Configuration["LLMSettings:Embedding:Endpoint"]!,
+    apiKey: builder.Configuration["LLMSettings:Embedding:ApiKey"]!);
+#pragma warning restore SKEXP0010
+
+// Plugins (Sesión 5)
+kernelBuilder.Plugins.AddFromObject(new ClimaPlugin(), "Clima");
+kernelBuilder.Plugins.AddFromType<MathPlugin>("Matematica");
+
+// Filtros (Sesión 6)
+kernelBuilder.Services.AddSingleton<IFunctionInvocationFilter, LoggingFilter>();
+
+builder.Services.AddSingleton(kernelBuilder.Build());
+
+// Services
+builder.Services.AddSingleton<BlogService>();
+builder.Services.AddSingleton<ChatSessionService>();
+builder.Services.AddSingleton<VectorStoreService>();
+
+// EF Core (Sesión 4)
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Data Source=cursosk.db"));
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
+
+app.UseSwagger();
+app.UseSwaggerUI();
+app.MapControllers();
+app.Run();
+```
+
+---
+
+## DTOs/Requests.cs — Versión Final Completa
+
+```csharp
+namespace CursoSK.Api.DTOs;
+
+// Sesión 1
+public record PromptRequest(string Prompt);
+public record PromptConSettingsRequest(string Prompt, int MaxTokens = 200, double Temperature = 0.7);
+
+// Sesión 3
+public record BlogRequest(string Tema);
+public record ChatMensajeRequest(string Mensaje);
+
+// Sesión 4
+public record ChatImagenRequest(string ImagenUrl, string? Pregunta);
+
+// Sesión 9
+public record IndexarDocumentoRequest(string Titulo, string Contenido, string Categoria);
+public record BusquedaSemanticaRequest(string Consulta, int Top = 3);
+```
