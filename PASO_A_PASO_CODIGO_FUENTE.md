@@ -1,6 +1,6 @@
-# Paso a Paso — Sesión 7: Prompting Avanzado + Templates YAML
+# Paso a Paso — Sesión 8: Intro Embeddings + VectorStoreService
 
-> **Rama Git:** `sesion/07`
+> **Rama Git:** `sesion/08`
 
 ---
 
@@ -8,157 +8,134 @@
 
 | Archivo | Acción |
 |---|---|
-| `Controllers/PromptingController.cs` | **Crear** |
-| `Prompts/ClasificarIntencion.yaml` | **Crear** |
-| `CursoSK.Api.csproj` | Modificar (copiar YAML al output) |
+| `Models/DocumentoVectorial.cs` | **Crear** |
+| `Services/VectorStoreService.cs` | **Crear** |
+| `Program.cs` | Modificar (registrar embeddings + VectorStoreService) |
 
 ---
 
-## Instalar paquetes NuGet adicionales
+## Instalar paquete NuGet adicional
 
 ```powershell
-dotnet add package Microsoft.SemanticKernel.PromptTemplates.Handlebars --version 1.48.0
-dotnet add package Microsoft.SemanticKernel.Yaml --version 1.48.0
+dotnet add package System.Numerics.Tensors --version 10.0.4
 ```
 
 ---
 
-## 1. Controllers/PromptingController.cs
+## 1. Models/DocumentoVectorial.cs
 
 ```csharp
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
-using CursoSK.Api.DTOs;
+namespace CursoSK.Api.Models;
 
-namespace CursoSK.Api.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-[Tags("7️⃣ Prompting — Sesión 7")]
-public class PromptingController : ControllerBase
+public class DocumentoVectorial
 {
-    private readonly Kernel _kernel;
-    public PromptingController(Kernel kernel) => _kernel = kernel;
-
-    [HttpPost("zero-shot")]
-    public async Task<IActionResult> ZeroShot([FromBody] PromptRequest request)
-    {
-        var result = await _kernel.InvokePromptAsync(request.Prompt);
-        return Ok(new { tecnica = "Zero-Shot", respuesta = result.ToString() });
-    }
-
-    [HttpPost("few-shot")]
-    public async Task<IActionResult> FewShot([FromBody] PromptRequest request)
-    {
-        var prompt = $"""
-            Clasifica el sentimiento del siguiente texto.
-            Ejemplos:
-            - "Me encanta este producto" → Positivo
-            - "Es terrible, no sirve" → Negativo
-            - "No está mal, pero podría mejorar" → Neutro
-
-            Texto: {request.Prompt}
-            Sentimiento:
-            """;
-        var result = await _kernel.InvokePromptAsync(prompt);
-        return Ok(new { tecnica = "Few-Shot", respuesta = result.ToString() });
-    }
-
-    [HttpPost("chain-of-thought")]
-    public async Task<IActionResult> ChainOfThought([FromBody] PromptRequest request)
-    {
-        var prompt = $"""
-            Analiza el siguiente problema paso a paso.
-            Primero identifica los datos, luego aplica la lógica, y finalmente da la respuesta.
-
-            Problema: {request.Prompt}
-
-            Razonamiento paso a paso:
-            """;
-        var result = await _kernel.InvokePromptAsync(prompt);
-        return Ok(new { tecnica = "Chain-of-Thought", respuesta = result.ToString() });
-    }
-
-    [HttpPost("yaml")]
-    public async Task<IActionResult> DesdeYaml([FromBody] PromptRequest request)
-    {
-        var yamlPath = Path.Combine(AppContext.BaseDirectory, "Prompts", "ClasificarIntencion.yaml");
-        var yaml = await System.IO.File.ReadAllTextAsync(yamlPath);
-        var promptConfig = KernelFunctionYaml.ToPromptTemplateConfig(yaml);
-        var factory = new HandlebarsPromptTemplateFactory();
-        var function = KernelFunctionFactory.CreateFromPrompt(promptConfig, factory);
-        var result = await _kernel.InvokeAsync(function, new() { ["consulta"] = request.Prompt });
-        return Ok(new { tecnica = "YAML Template", respuesta = result.ToString() });
-    }
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Titulo { get; set; } = string.Empty;
+    public string Contenido { get; set; } = string.Empty;
+    public string Categoria { get; set; } = string.Empty;
+    public ReadOnlyMemory<float>? Embedding { get; set; }
 }
 ```
 
 ---
 
-## 2. Prompts/ClasificarIntencion.yaml
+## 2. Services/VectorStoreService.cs
 
-```yaml
-name: ClasificarIntencion
-description: Clasifica la intención del usuario en una categoría predefinida.
-template_format: handlebars
-template: |
-  Eres un clasificador de intenciones para un sistema bancario.
-  Analiza la consulta del usuario y clasifícala en UNA de estas categorías:
-  - consulta_general: preguntas generales, saludos
-  - solicitud_prestamo: quiere solicitar un préstamo
-  - estado_solicitud: pregunta por el estado de una solicitud
-  - consulta_legal: pregunta sobre regulaciones o normativas
-  - simulacion: quiere simular un préstamo o calcular cuotas
-  - reclamo: tiene una queja o problema
+```csharp
+using System.Collections.Concurrent;
+using System.Numerics.Tensors;
+using Microsoft.SemanticKernel.Embeddings;
+using CursoSK.Api.Models;
 
-  Responde SOLO con el nombre de la categoría, sin explicación.
-  Consulta del usuario: {{consulta}}
-  Categoría:
-input_variables:
-  - name: consulta
-    description: La consulta del usuario a clasificar
-    is_required: true
-execution_settings:
-  default:
-    max_tokens: 20
-    temperature: 0.0
+namespace CursoSK.Api.Services;
+
+#pragma warning disable SKEXP0010
+
+public class VectorStoreService
+{
+    private readonly ConcurrentDictionary<string, DocumentoVectorial> _store = new();
+    private readonly ITextEmbeddingGenerationService? _embeddingService;
+    private readonly ILogger<VectorStoreService> _logger;
+
+    public VectorStoreService(IServiceProvider sp, ILogger<VectorStoreService> logger)
+    {
+        _embeddingService = sp.GetService<ITextEmbeddingGenerationService>();
+        _logger = logger;
+    }
+
+    public async Task<string> IndexarDocumento(string titulo, string contenido, string categoria)
+    {
+        if (_embeddingService == null)
+            throw new InvalidOperationException("Servicio de embeddings no configurado.");
+
+        var embedding = await _embeddingService.GenerateEmbeddingAsync(contenido);
+        var doc = new DocumentoVectorial
+        {
+            Titulo = titulo,
+            Contenido = contenido,
+            Categoria = categoria,
+            Embedding = embedding
+        };
+        _store.TryAdd(doc.Id, doc);
+        _logger.LogInformation("Documento indexado: {Titulo} ({Id})", titulo, doc.Id);
+        return doc.Id;
+    }
+
+    public async Task<List<(DocumentoVectorial Doc, double Score)>> BuscarSimilares(string consulta, int top = 3)
+    {
+        if (_embeddingService == null)
+            throw new InvalidOperationException("Servicio de embeddings no configurado.");
+
+        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(consulta);
+        return _store.Values
+            .Where(d => d.Embedding.HasValue)
+            .Select(d => (Doc: d, Score: (double)TensorPrimitives.CosineSimilarity(
+                queryEmbedding.Span, d.Embedding!.Value.Span)))
+            .OrderByDescending(x => x.Score)
+            .Take(top)
+            .ToList();
+    }
+
+    public int Count => _store.Count;
+}
+
+#pragma warning restore SKEXP0010
 ```
 
 ---
 
-## 3. Modificar CursoSK.Api.csproj
+## 3. Modificar Program.cs
 
-Agregar para que los archivos YAML se copien al output:
+Agregar al `kernelBuilder`:
 
-```xml
-<ItemGroup>
-  <None Update="Prompts\**\*.yaml">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
-</ItemGroup>
+```csharp
+// Embeddings (Sesión 8)
+#pragma warning disable SKEXP0010
+kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
+    deploymentName: builder.Configuration["LLMSettings:Embedding:DeploymentName"]!,
+    endpoint: builder.Configuration["LLMSettings:Embedding:Endpoint"]!,
+    apiKey: builder.Configuration["LLMSettings:Embedding:ApiKey"]!);
+#pragma warning restore SKEXP0010
+```
+
+Agregar al DI:
+
+```csharp
+builder.Services.AddSingleton<VectorStoreService>();
+```
+
+No olvidar el `using`:
+
+```csharp
+using CursoSK.Api.Services;
 ```
 
 ---
 
 ## 4. Probar
 
-```powershell
-dotnet run
-```
-
-- `POST /api/prompting/zero-shot` → `{ "prompt": "Traduce 'hello world' al español" }`
-- `POST /api/prompting/few-shot` → `{ "prompt": "El servicio fue excelente, muy recomendado" }`
-- `POST /api/prompting/chain-of-thought` → `{ "prompt": "Si tengo 3 cajas con 12 manzanas cada una y regalo 8, ¿cuántas me quedan?" }`
-- `POST /api/prompting/yaml` → `{ "prompt": "Quiero solicitar un préstamo de 50,000 lempiras" }`
-
----
-
-## 5. Azure Setup
-
-Ejecutar el script para crear el deployment de embeddings (preparación para sesión 8):
+Los endpoints de embeddings se probarán en la sesión 9 con el `RAGController`. Por ahora verificar que el proyecto compila:
 
 ```powershell
-cd Scripts/Azure
-.\07-crear-deployment-embedding.ps1
+dotnet build
 ```

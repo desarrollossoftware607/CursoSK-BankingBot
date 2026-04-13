@@ -14,6 +14,7 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "CursoSK.Api", Version = "v1",
         Description = "API del curso Máster en Semantic Kernel — crece sesión a sesión" });
 });
+builder.Services.AddHttpClient();
 
 // --- EF Core + SQLite ---
 builder.Services.AddDbContext<AppDbContext>(opt =>
@@ -37,6 +38,19 @@ else
         apiKey: builder.Configuration["LLMSettings:AzureOpenAI:ApiKey"]!);
 }
 
+#pragma warning disable SKEXP0010
+var embeddingEndpoint = builder.Configuration["LLMSettings:Embedding:Endpoint"];
+var embeddingKey = builder.Configuration["LLMSettings:Embedding:ApiKey"];
+var embeddingDeployment = builder.Configuration["LLMSettings:Embedding:DeploymentName"];
+if (!string.IsNullOrEmpty(embeddingEndpoint))
+{
+    kernelBuilder.AddAzureOpenAITextEmbeddingGeneration(
+        deploymentName: embeddingDeployment!,
+        endpoint: embeddingEndpoint,
+        apiKey: embeddingKey!);
+}
+#pragma warning restore SKEXP0010
+
 // Plugins
 var kernel = kernelBuilder.Build();
 kernel.Plugins.AddFromObject(new ClimaPlugin(), "Clima");
@@ -47,9 +61,11 @@ kernel.FunctionInvocationFilters.Add(new LoggingFilter(
 builder.Services.AddSingleton(kernel);
 
 // --- Servicios ---
-builder.Services.AddSingleton<BlogService>();
 builder.Services.AddSingleton<ChatSessionService>();
+builder.Services.AddSingleton<VectorStoreService>();
+builder.Services.AddSingleton<BlogService>();
 
+// --- App ---
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
