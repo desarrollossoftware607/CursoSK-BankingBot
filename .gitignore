@@ -1,0 +1,30 @@
+## .NET
+bin/
+obj/
+*.db
+*.user
+*.suo
+.vs/
+
+## Publish
+publish_output/
+*.zip
+
+## IDE
+.idea/
+*.swp
+*~
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Secrets
+appsettings.Development.json
+
+## Personal
+GUION_DIAPOSITIVAS_IA.md
+CURSO_UNIFICADO_JORNALIZACION.md
+CURSO_AGENTES_IA_AZURE_JORNALIZACION.md
+CursoSK.BankingBot/
+temp_versions/
