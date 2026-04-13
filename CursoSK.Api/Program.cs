@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using CursoSK.Api.Data;
 using CursoSK.Api.Plugins;
 using CursoSK.Api.Services;
+using CursoSK.Api.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,8 @@ else
 var kernel = kernelBuilder.Build();
 kernel.Plugins.AddFromObject(new ClimaPlugin(), "Clima");
 kernel.Plugins.AddFromObject(new MathPlugin(), "Matematica");
+kernel.FunctionInvocationFilters.Add(new LoggingFilter(
+    builder.Services.BuildServiceProvider().GetRequiredService<ILoggerFactory>().CreateLogger<LoggingFilter>()));
 
 builder.Services.AddSingleton(kernel);
 

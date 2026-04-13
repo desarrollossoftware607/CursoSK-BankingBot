@@ -1,6 +1,6 @@
-# Paso a Paso — Sesión 5: Plugins Nativos y Function Calling
+# Paso a Paso — Sesión 6: Plugins Avanzados + Filtros + OpenAPI
 
-> **Rama Git:** `sesion/05`
+> **Rama Git:** `sesion/06`
 
 ---
 
@@ -8,145 +8,66 @@
 
 | Archivo | Acción |
 |---|---|
-| `Plugins/ClimaPlugin.cs` | **Crear** |
-| `Plugins/MathPlugin.cs` | **Crear** |
-| `Controllers/AgentController.cs` | **Crear** |
-| `Program.cs` | Modificar (registrar plugins) |
+| `Filters/LoggingFilter.cs` | **Crear** |
+| `Program.cs` | Modificar (registrar filtro) |
 
 ---
 
-## 1. Plugins/ClimaPlugin.cs
+## 1. Filters/LoggingFilter.cs
 
 ```csharp
-using System.ComponentModel;
 using Microsoft.SemanticKernel;
 
-namespace CursoSK.Api.Plugins;
+namespace CursoSK.Api.Filters;
 
-public class ClimaPlugin
+public class LoggingFilter : IFunctionInvocationFilter
 {
-    private static readonly Dictionary<string, string> _climas = new(StringComparer.OrdinalIgnoreCase)
+    private readonly ILogger<LoggingFilter> _logger;
+    public LoggingFilter(ILogger<LoggingFilter> logger) => _logger = logger;
+
+    public async Task OnFunctionInvocationAsync(
+        FunctionInvocationContext context, Func<FunctionInvocationContext, Task> next)
     {
-        ["tegucigalpa"] = "☀️ 28°C, Soleado",
-        ["san pedro sula"] = "🌤️ 32°C, Parcialmente nublado",
-        ["la ceiba"] = "🌧️ 29°C, Lluvioso",
-        ["roatan"] = "☀️ 31°C, Soleado con brisa",
-        ["comayagua"] = "⛅ 27°C, Nublado",
-        ["choluteca"] = "🔥 36°C, Muy caluroso"
-    };
+        var pluginName = context.Function.PluginName;
+        var functionName = context.Function.Name;
+        var args = string.Join(", ", context.Arguments.Select(a => $"{a.Key}={a.Value}"));
 
-    [KernelFunction("obtener_clima")]
-    [Description("Obtiene el clima actual de una ciudad específica")]
-    public string ObtenerClima([Description("Nombre de la ciudad")] string ciudad) =>
-        _climas.GetValueOrDefault(ciudad, $"No tengo datos del clima para {ciudad}");
+        _logger.LogInformation("▶ Invocando {Plugin}.{Function}({Args})", pluginName, functionName, args);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
 
-    [KernelFunction("obtener_fecha_hora")]
-    [Description("Obtiene la fecha y hora actual del servidor")]
-    public string ObtenerFechaHora() =>
-        $"Fecha: {DateTime.Now:dd/MM/yyyy}, Hora: {DateTime.Now:hh:mm tt}";
-}
-```
+        await next(context);
 
----
-
-## 2. Plugins/MathPlugin.cs
-
-```csharp
-using System.ComponentModel;
-using Microsoft.SemanticKernel;
-
-namespace CursoSK.Api.Plugins;
-
-public class MathPlugin
-{
-    [KernelFunction("sumar")]
-    [Description("Suma dos números")]
-    public double Sumar([Description("Primer número")] double a, [Description("Segundo número")] double b) => a + b;
-
-    [KernelFunction("restar")]
-    [Description("Resta dos números (a - b)")]
-    public double Restar([Description("Primer número")] double a, [Description("Segundo número")] double b) => a - b;
-
-    [KernelFunction("multiplicar")]
-    [Description("Multiplica dos números")]
-    public double Multiplicar([Description("Primer número")] double a, [Description("Segundo número")] double b) => a * b;
-
-    [KernelFunction("dividir")]
-    [Description("Divide dos números (a / b)")]
-    public string Dividir([Description("Dividendo")] double a, [Description("Divisor")] double b) =>
-        b == 0 ? "Error: no se puede dividir entre cero" : (a / b).ToString("F4");
-}
-```
-
----
-
-## 3. Controllers/AgentController.cs
-
-```csharp
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
-using CursoSK.Api.DTOs;
-
-namespace CursoSK.Api.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-[Tags("5️⃣ Agent — Sesiones 5-6")]
-public class AgentController : ControllerBase
-{
-    private readonly Kernel _kernel;
-    public AgentController(Kernel kernel) => _kernel = kernel;
-
-    [HttpPost("consultar")]
-    public async Task<IActionResult> Consultar([FromBody] PromptRequest request)
-    {
-        var settings = new OpenAIPromptExecutionSettings
-        {
-            FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
-        };
-        var result = await _kernel.InvokePromptAsync(request.Prompt, new KernelArguments(settings));
-        return Ok(new { respuesta = result.ToString() });
-    }
-
-    [HttpGet("plugins")]
-    public IActionResult ListarPlugins()
-    {
-        var plugins = _kernel.Plugins.Select(p => new {
-            plugin = p.Name,
-            funciones = p.Select(f => new { nombre = f.Name, descripcion = f.Description })
-        });
-        return Ok(plugins);
+        sw.Stop();
+        _logger.LogInformation("✔ {Plugin}.{Function} completado en {Ms}ms → {Result}",
+            pluginName, functionName, sw.ElapsedMilliseconds, context.Result);
     }
 }
 ```
 
 ---
 
-## 4. Registrar plugins en Program.cs
+## 2. Registrar filtro en Program.cs
 
-Agregar ANTES de `kernelBuilder.Build()`:
+Agregar al `kernelBuilder`:
 
 ```csharp
-// Plugins (Sesión 5)
-kernelBuilder.Plugins.AddFromObject(new ClimaPlugin(), "Clima");
-kernelBuilder.Plugins.AddFromType<MathPlugin>("Matematica");
+// Filtros (Sesión 6)
+kernelBuilder.Services.AddSingleton<IFunctionInvocationFilter, LoggingFilter>();
 ```
 
-No olvidar el `using` al inicio:
+No olvidar el `using`:
 
 ```csharp
-using CursoSK.Api.Plugins;
+using CursoSK.Api.Filters;
 ```
 
 ---
 
-## 5. Probar Function Calling
+## 3. Probar
 
 ```powershell
 dotnet run
 ```
 
-- `POST /api/agent/consultar` → `{ "prompt": "¿Cuál es el clima en Tegucigalpa?" }` → El LLM invoca `ClimaPlugin.obtener_clima`
-- `POST /api/agent/consultar` → `{ "prompt": "¿Cuánto es 15 × 7 + 3?" }` → El LLM invoca `MathPlugin.multiplicar` y `MathPlugin.sumar`
-- `GET /api/agent/plugins` → Lista todas las funciones disponibles
+- `POST /api/agent/consultar` → `{ "prompt": "¿Cuál es el clima en San Pedro Sula?" }`
+- Observar los logs en la consola: se registra cada invocación de función con el tiempo de ejecución
