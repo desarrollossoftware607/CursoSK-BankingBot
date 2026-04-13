@@ -123,7 +123,6 @@ cd Scripts/Azure
 
 | Documento | Contenido |
 |---|---|
-| [`CURSO_UNIFICADO_JORNALIZACION.md`](CURSO_UNIFICADO_JORNALIZACION.md) | Jornalización completa — 10 sesiones detalladas |
 | [`PASO_A_PASO_CODIGO_FUENTE.md`](PASO_A_PASO_CODIGO_FUENTE.md) | Guía paso a paso del código fuente |
 
 ---
@@ -170,7 +169,6 @@ Curso Agentes/
 │       ├── 09-crear-ai-search.ps1
 │       ├── 10-deploy-app-service.ps1
 │       └── 10-foundry-setup.ps1
-├── CURSO_UNIFICADO_JORNALIZACION.md
 ├── PASO_A_PASO_CODIGO_FUENTE.md
 └── README.md
 ```
