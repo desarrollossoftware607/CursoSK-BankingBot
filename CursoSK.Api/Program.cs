@@ -7,6 +7,7 @@ using CursoSK.Api.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- ASP.NET Core ---
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
