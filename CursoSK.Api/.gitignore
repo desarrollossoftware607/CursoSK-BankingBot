@@ -1,0 +1,24 @@
+## Build results
+[Bb]in/
+[Oo]bj/
+publish/
+
+## IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+
+## SQLite
+*.db
+*.db-shm
+*.db-wal
+
+## Secrets
+appsettings.Development.json
+appsettings.Production.json
+
+## OS
+Thumbs.db
+.DS_Store

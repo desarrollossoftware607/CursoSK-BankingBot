@@ -1,0 +1,203 @@
+═══════════════════════════════════════════════════════════════════════
+              REPÚBLICA DE HONDURAS — CONGRESO NACIONAL
+                        DECRETO No. 144-2014
+          LEY CONTRA EL LAVADO DE ACTIVOS Y FINANCIAMIENTO
+                          DEL TERRORISMO
+═══════════════════════════════════════════════════════════════════════
+
+Fecha de publicación: 30 de diciembre de 2014
+Categoría: Lavado de Activos / Prevención
+Estado: VIGENTE
+
+───────────────────────────────────────────────────────────────────────
+               CAPÍTULO I — DISPOSICIONES GENERALES
+───────────────────────────────────────────────────────────────────────
+
+Artículo 1. OBJETO.
+La presente Ley tiene como objetivo prevenir, detectar y sancionar el
+lavado de activos provenientes de actividades delictivas y el
+financiamiento del terrorismo en el territorio nacional.
+
+Artículo 2. ÁMBITO DE APLICACIÓN.
+Esta Ley es aplicable a todas las personas naturales y jurídicas,
+nacionales y extranjeras, que realicen actividades financieras,
+comerciales o profesionales susceptibles de ser utilizadas para el
+lavado de activos o financiamiento del terrorismo.
+
+Artículo 3. SUJETOS OBLIGADOS.
+Son sujetos obligados al cumplimiento de esta Ley:
+a) Bancos comerciales y de desarrollo;
+b) Sociedades financieras;
+c) Casas de cambio;
+d) Cooperativas de ahorro y crédito;
+e) Compañías de seguros y reaseguros;
+f) Administradoras de fondos de pensiones;
+g) Bolsas de valores y puestos de bolsa;
+h) Organizaciones sin fines de lucro;
+i) Casinos y establecimientos de juego;
+j) Empresas de transferencia de dinero (remesas);
+k) Agentes inmobiliarios;
+l) Comerciantes de metales y piedras preciosas;
+m) Notarios públicos y abogados (en operaciones financieras);
+n) Contadores públicos autorizados;
+o) Las demás que designe la CNBS.
+
+───────────────────────────────────────────────────────────────────────
+              CAPÍTULO II — DEBIDA DILIGENCIA DEL CLIENTE
+───────────────────────────────────────────────────────────────────────
+
+Artículo 5. IDENTIFICACIÓN DEL CLIENTE.
+Los sujetos obligados deberán identificar a sus clientes y verificar
+su identidad antes de establecer una relación comercial o realizar
+una transacción ocasional.
+
+Artículo 6. DEBIDA DILIGENCIA ESTÁNDAR.
+La debida diligencia incluirá como mínimo:
+a) Identificación del cliente con documento oficial vigente;
+b) Verificación de la identidad del cliente mediante documentos,
+   datos o información de fuentes independientes;
+c) Identificación del beneficiario final;
+d) Obtención de información sobre el propósito y la naturaleza
+   de la relación comercial;
+e) Seguimiento continuo de la relación comercial.
+
+Artículo 7. DEBIDA DILIGENCIA REFORZADA.
+Se aplicará debida diligencia reforzada en los siguientes casos:
+a) Personas Expuestas Políticamente (PEP);
+b) Relaciones de corresponsalía bancaria transfronteriza;
+c) Clientes de alto riesgo según la clasificación institucional;
+d) Transacciones inusuales o complejas;
+e) Países o territorios de mayor riesgo según el GAFI.
+
+Artículo 8. PROGRAMA DE CUMPLIMIENTO.
+Los sujetos obligados deberán implementar un programa de cumplimiento
+que incluya:
+a) Políticas y procedimientos de identificación del cliente;
+b) Sistema de monitoreo de transacciones;
+c) Detección y reporte de operaciones sospechosas;
+d) Capacitación continua del personal;
+e) Auditoría independiente del programa;
+f) Designación de un Oficial de Cumplimiento.
+
+───────────────────────────────────────────────────────────────────────
+          CAPÍTULO III — REPORTE DE TRANSACCIONES
+───────────────────────────────────────────────────────────────────────
+
+Artículo 10. REPORTE DE TRANSACCIONES SOSPECHOSAS (RTS).
+Los sujetos obligados deberán reportar a la UIF toda transacción
+que consideren sospechosa, independientemente de su monto, dentro
+de los cinco (5) días hábiles siguientes a la fecha en que se
+determine la sospecha.
+
+Artículo 11. ELEMENTOS DE SOSPECHA.
+Se considerarán indicadores de sospecha, entre otros:
+a) Transacciones que no guarden relación con el perfil del cliente;
+b) Fraccionamiento de operaciones para evadir controles;
+c) Uso de testaferros o personas interpuestas;
+d) Transacciones con países o jurisdicciones de alto riesgo;
+e) Movimientos de efectivo inusuales;
+f) Resistencia del cliente a proporcionar información.
+
+Artículo 12. REPORTE DE TRANSACCIONES EN EFECTIVO (RTE).
+Toda transacción en efectivo por un monto igual o superior a
+US$ 10,000.00 (diez mil dólares de los Estados Unidos de América)
+o su equivalente en moneda nacional u otra moneda extranjera,
+deberá ser reportada a la Unidad de Inteligencia Financiera.
+
+El reporte deberá contener como mínimo:
+a) Identificación completa del cliente;
+b) Monto y moneda de la transacción;
+c) Tipo de transacción (depósito, retiro, transferencia, etc.);
+d) Fecha y hora de la transacción;
+e) Sucursal donde se realizó;
+f) Identificación del empleado que atendió la operación.
+
+Artículo 13. REPORTE DE TRANSFERENCIAS INTERNACIONALES.
+Las transferencias internacionales por cualquier monto deberán
+incluir la información del ordenante y del beneficiario.
+Para transferencias superiores a US$ 1,000.00 se requerirá
+además la verificación de identidad del ordenante.
+
+───────────────────────────────────────────────────────────────────────
+             CAPÍTULO IV — CONSERVACIÓN DE REGISTROS
+───────────────────────────────────────────────────────────────────────
+
+Artículo 15. CONSERVACIÓN DOCUMENTAL.
+Los sujetos obligados deberán conservar los registros de
+transacciones y documentos de identificación de clientes por
+un período mínimo de cinco (5) años a partir de la fecha de:
+a) La última transacción, para registros de transacciones;
+b) La terminación de la relación comercial, para documentos
+   de identificación del cliente;
+c) La presentación del reporte, para RTS y RTE.
+
+Artículo 16. FORMATO DE CONSERVACIÓN.
+Los registros podrán conservarse en formato físico o electrónico,
+siempre que permitan su reconstrucción de manera oportuna y
+completa. Los documentos electrónicos tendrán la misma validez
+que los documentos físicos.
+
+───────────────────────────────────────────────────────────────────────
+               CAPÍTULO V — UNIDAD DE INTELIGENCIA
+                         FINANCIERA (UIF)
+───────────────────────────────────────────────────────────────────────
+
+Artículo 18. CREACIÓN Y NATURALEZA.
+Se crea la Unidad de Inteligencia Financiera (UIF) como órgano
+adscrito a la CNBS, con autonomía funcional para el análisis de
+la información reportada por los sujetos obligados.
+
+Artículo 19. FUNCIONES DE LA UIF.
+La UIF tendrá las siguientes funciones:
+a) Recibir y analizar los reportes de transacciones sospechosas
+   y en efectivo;
+b) Solicitar información adicional a los sujetos obligados;
+c) Intercambiar información con unidades homólogas extranjeras;
+d) Diseminar informes de inteligencia al Ministerio Público;
+e) Emitir directrices y tipologías de lavado de activos;
+f) Llevar estadísticas de la actividad reportada.
+
+───────────────────────────────────────────────────────────────────────
+                CAPÍTULO VI — SANCIONES
+───────────────────────────────────────────────────────────────────────
+
+Artículo 20. SANCIONES ADMINISTRATIVAS.
+Las infracciones a esta Ley se sancionarán con:
+a) Amonestación escrita;
+b) Multas de L. 500,000.00 a L. 10,000,000.00;
+c) Suspensión temporal del Oficial de Cumplimiento;
+d) Suspensión temporal o cancelación de la licencia de operación.
+
+Artículo 22. SANCIONES PENALES.
+El delito de lavado de activos será sancionado con:
+a) Reclusión de quince (15) a veinte (20) años;
+b) Multa de dos a tres veces el valor de los activos lavados;
+c) Decomiso de los bienes producto del delito.
+
+Artículo 25. RESPONSABILIDAD DE PERSONAS JURÍDICAS.
+Las personas jurídicas serán responsables cuando el lavado de
+activos se cometa en su nombre o beneficio. Las sanciones podrán
+incluir: multa, suspensión de actividades, y disolución de la
+persona jurídica.
+
+───────────────────────────────────────────────────────────────────────
+              CAPÍTULO VII — COOPERACIÓN INTERNACIONAL
+───────────────────────────────────────────────────────────────────────
+
+Artículo 30. ASISTENCIA LEGAL MUTUA.
+Honduras cooperará con otros Estados en materia de prevención y
+represión del lavado de activos mediante:
+a) Intercambio de información financiera;
+b) Ejecución de solicitudes de asistencia legal;
+c) Extradición;
+d) Decomiso de bienes en el extranjero.
+
+Artículo 32. ESTÁNDARES INTERNACIONALES.
+Honduras se compromete a implementar las recomendaciones del
+Grupo de Acción Financiera Internacional (GAFI) y las directrices
+del Grupo de Acción Financiera del Caribe (CFATF).
+
+═══════════════════════════════════════════════════════════════════════
+  Dado en la ciudad de Tegucigalpa, M.D.C., a los treinta días del
+  mes de diciembre de dos mil catorce.
+═══════════════════════════════════════════════════════════════════════

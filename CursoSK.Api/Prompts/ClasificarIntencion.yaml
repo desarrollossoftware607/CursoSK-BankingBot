@@ -1,0 +1,26 @@
+name: ClasificarIntencion
+description: Clasifica la intención del usuario en una categoría predefinida.
+template_format: handlebars
+template: |
+  Eres un clasificador de intenciones para un sistema bancario.
+  Analiza la consulta del usuario y clasifícala en UNA de estas categorías:
+
+  - consulta_general: preguntas generales, saludos
+  - solicitud_prestamo: quiere solicitar un préstamo
+  - estado_solicitud: pregunta por el estado de una solicitud
+  - consulta_legal: pregunta sobre regulaciones o normativas
+  - simulacion: quiere simular un préstamo o calcular cuotas
+  - reclamo: tiene una queja o problema
+
+  Responde SOLO con el nombre de la categoría, sin explicación.
+
+  Consulta del usuario: {{consulta}}
+  Categoría:
+input_variables:
+  - name: consulta
+    description: La consulta del usuario a clasificar
+    is_required: true
+execution_settings:
+  default:
+    max_tokens: 20
+    temperature: 0.0

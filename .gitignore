@@ -1,0 +1,23 @@
+## .NET
+bin/
+obj/
+*.db
+*.user
+*.suo
+.vs/
+
+## Publish
+publish_output/
+*.zip
+
+## IDE
+.idea/
+*.swp
+*~
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Secrets
+appsettings.Development.json
