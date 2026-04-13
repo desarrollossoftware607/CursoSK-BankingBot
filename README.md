@@ -124,7 +124,6 @@ cd Scripts/Azure
 | Documento | Contenido |
 |---|---|
 | [`CURSO_UNIFICADO_JORNALIZACION.md`](CURSO_UNIFICADO_JORNALIZACION.md) | Jornalización completa — 10 sesiones detalladas |
-| [`GUION_DIAPOSITIVAS_IA.md`](GUION_DIAPOSITIVAS_IA.md) | Prompts para generar diapositivas con IA |
 | [`PASO_A_PASO_CODIGO_FUENTE.md`](PASO_A_PASO_CODIGO_FUENTE.md) | Guía paso a paso del código fuente |
 
 ---
@@ -172,7 +171,6 @@ Curso Agentes/
 │       ├── 10-deploy-app-service.ps1
 │       └── 10-foundry-setup.ps1
 ├── CURSO_UNIFICADO_JORNALIZACION.md
-├── GUION_DIAPOSITIVAS_IA.md
 ├── PASO_A_PASO_CODIGO_FUENTE.md
 └── README.md
 ```
