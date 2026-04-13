@@ -354,6 +354,73 @@ Y cómo `WhatsAppChatController.RegistrarMensajeEntrante()` persiste todo en BD.
 - Similaridad coseno: cómo se comparan documentos
 - Modelos de embeddings: text-embedding-ada-002, text-embedding-3-small/large
 - Chunking: cómo dividir documentos largos para vectorización
+- **Diferencia clave:** Cargar un archivo como contexto directo consume tokens del modelo (limitado por ventana de contexto). Convertirlo a embeddings permite manejar documentos grandes eficientemente.
+
+**📂 Carga de Archivos en Foundry — Índices Vectoriales desde el Portal Web:**
+
+> Al subir archivos en el Área de Juegos (Playground) de Microsoft Foundry, los archivos **NO se usan como contexto directo** del modelo. En su lugar, se procesan así:
+
+```
+Archivo (.pdf, .txt, .docx, .md)
+    ↓
+Foundry extrae el texto y lo divide en fragmentos (chunks)
+    ↓
+Cada fragmento se convierte a un vector embedding
+    ↓
+Los vectores se almacenan en un índice vectorial
+    ↓
+Cuando el modelo necesita información, busca fragmentos relevantes
+    ↓
+Solo los fragmentos relevantes se inyectan como contexto (RAG)
+```
+
+**🔧 Paso a Paso — Subir Archivos y Crear Índice Vectorial en Foundry Web:**
+
+**Desde el Área de Juegos (Playground) del Portal Foundry:**
+1. Ir a https://ai.azure.com → abrir proyecto → seleccionar deployment del modelo (ej: `gpt-35-turbo-16k`)
+2. En el Área de Juegos, buscar la sección **"Adjuntar archivos"** (o "Add your data")
+3. En el diálogo de "Adjuntar archivos":
+   - **Opción de índice:** "Crear un nuevo índice" o "Usar índice existente"
+   - **Nombre del índice de vector:** Se genera automáticamente (ej: `indice_plum_hat_bntfs5ph4y`) o asignar nombre descriptivo
+4. **Arrastrar y soltar archivos** o usar "examinar archivos" para seleccionar los documentos
+   - Formatos soportados: PDF, TXT, DOCX, MD y otros
+   - Ideal para: leyes, normativas, manuales, FAQs, políticas internas
+5. Clic en **"Adjuntar"**
+6. Foundry procesa los archivos automáticamente:
+   - Extrae texto del documento
+   - Divide en fragmentos (chunking automático)
+   - Genera embeddings con el modelo de embedding configurado
+   - Almacena todo en un índice de Azure AI Search
+7. Una vez procesado, el modelo puede consultar el índice para responder preguntas basándose en los documentos
+
+**⚠️ Concepto clave para la clase:**
+```
+❌ SIN índice vectorial:
+   Archivo completo (50 páginas) → Se inyecta como contexto → 50,000+ tokens consumidos
+   Problema: Excede ventana de contexto, costoso, lento
+
+✅ CON índice vectorial (lo que hace Foundry):
+   Archivo (50 páginas) → 200 fragmentos → 200 vectores en índice
+   Pregunta del usuario → Se buscan los 3-5 fragmentos más relevantes
+   Solo ~500-1000 tokens inyectados como contexto → Respuesta precisa y eficiente
+```
+
+**🛡️ Límites de Protección (Guardrails):**
+
+Al configurar el modelo en Foundry, se pueden asignar límites de protección:
+1. En el deployment del modelo → **"Asignar límite de protección"**
+2. Opciones disponibles:
+   - **Microsoft.Default** — Filtros estándar
+   - **Microsoft.DefaultV2** — Filtros mejorados con:
+     - **Liberar (1):** Bloqueo de entrada de usuario para liberación de prompt
+     - **Seguridad del contenido (4):**
+       - Odio: Bloqueo medio (Entrada + Resultado)
+       - Autolesiones: Bloqueo medio (Entrada + Resultado)
+       - Sexual: Bloqueo medio (Entrada + Resultado)
+       - Violencia: Bloqueo medio (Entrada + Resultado)
+3. Clic en **"Asignar"** (puede tardar hasta 15 minutos)
+
+> Estos límites protegen tanto la entrada del usuario como la salida del modelo, ideal para contextos bancarios regulados.
 
 **🔧 Paso a Paso — Desplegar Modelo de Embedding en Azure:**
 
@@ -401,10 +468,44 @@ az cognitiveservices account deployment show \
 > ⚠️ **IMPORTANTE:** El deployment name debe coincidir exactamente con lo configurado en Azure. Si el deployment no existe, recibirás error `404 DeploymentNotFound`. Verificar siempre con `az cognitiveservices account deployment list`.
 
 **Actividad Práctica — Aprender Haciendo:**
-> Generación de vectores a partir de normativas legales y políticas de cumplimiento bancario.
+> 1. **Vía Portal Foundry (sin código):** Subir las leyes bancarias hondureñas (Decreto 129-2004, 144-2014, 170-2016, Resolución CNBS-GES-041-2019) al Playground del modelo → observar cómo se crea el índice vectorial automáticamente → hacer preguntas legales y verificar que el modelo responde con información del índice
+> 2. **Vía código C#:** Generar embeddings programáticamente con la API de Azure OpenAI y almacenarlos en el vector store del proyecto
+
+**Código C# para generar embeddings (referencia oficial):**
+```csharp
+using OpenAI;
+using OpenAI.Embeddings;
+using System.ClientModel;
+
+EmbeddingClient client = new(
+    "text-embedding-ada-002",  // Deployment name en Azure
+    credential: new ApiKeyCredential("TU_API_KEY"),
+    options: new OpenAIClientOptions()
+    {
+        Endpoint = new Uri("https://tu-recurso.openai.azure.com/openai/v1")
+    }
+);
+
+string input = "Artículo 45 de la Ley del Sistema Financiero";
+OpenAIEmbedding embedding = client.GenerateEmbedding(input);
+ReadOnlyMemory<float> vector = embedding.ToFloats();
+// vector contiene 1536 dimensiones (ada-002) que representan el significado semántico
+```
+
+> **Mejores prácticas de embeddings:**
+> - Máximo 8,192 tokens por input (modelos de última generación)
+> - Máximo 2,048 inputs por request en batch
+> - Verificar que los inputs no excedan el límite antes de enviar
 
 **🔗 Conexión con el Proyecto Real:**
-Se muestra cómo el archivo `Datos/InfoLaboratorio.txt` actualmente se inyecta como texto completo en el prompt del `LaboratorioPlugin.infoLab()`. Se discute la limitación de este enfoque (consume tokens, no escala) y se introduce embeddings como solución superior. Los participantes vectorizan un corpus de regulaciones bancarias.
+Se muestra cómo el archivo `Datos/InfoLaboratorio.txt` actualmente se inyecta como texto completo en el prompt del `LaboratorioPlugin.infoLab()`. Se discute la limitación de este enfoque (consume tokens, no escala) y se introduce embeddings como solución superior:
+
+| Enfoque | Tokens Consumidos | Escala | Costo |
+|---------|-------------------|--------|-------|
+| Texto completo en prompt | ~10,000+ por consulta | ❌ Limitado a ventana de contexto | Alto |
+| Embeddings + Vector Search | ~500-1,000 por consulta (solo fragmentos relevantes) | ✅ Millones de documentos | Bajo |
+
+Los participantes vectorizan un corpus de regulaciones bancarias tanto desde el portal Foundry como desde código.
 
 ---
 
@@ -457,10 +558,18 @@ az search admin-key show \
 > El proyecto `CursoSK.BankingBot` usa un **vector store en memoria** con `ConcurrentDictionary` + `CosineSimilarity` de `System.Numerics.Tensors`. Esto es ideal para desarrollo y aprendizaje. En producción, reemplazar por Azure AI Search.
 
 **Actividad Práctica — Aprender Haciendo:**
-> Configuración de una base de datos vectorial para indexar normativas bancarias actualizadas.
+> 1. **Enfoque Web (Foundry):** Explorar el índice vectorial creado en el Día 6 desde Foundry → verificar los documentos indexados → probar queries de búsqueda desde el Playground
+> 2. **Enfoque Código:** Configurar vector store en el proyecto `CursoSK.BankingBot` (in-memory o Azure AI Search) → indexar las normativas bancarias programáticamente
+> 3. **Comparar:** Portal Foundry (zero-code, rápido para prototipos) vs. Código (control total, integrable en APIs)
 
 **🔗 Conexión con el Proyecto Real:**
-Se identifica la oportunidad: el agente actual inyecta información de laboratorio como texto plano. Con Azure AI Search, se podría indexar todo el catálogo de análisis, requisitos y precios para búsqueda semántica — reduciendo tokens y mejorando precisión.
+Se identifica la oportunidad: el agente actual inyecta información de laboratorio como texto plano. Con un vector store (Azure AI Search o Foundry), se podría indexar todo el catálogo de análisis, requisitos y precios para búsqueda semántica — reduciendo tokens y mejorando precisión.
+
+| Herramienta | Mejor para | Limitaciones |
+|---|---|---|
+| **Foundry Portal (Adjuntar archivos)** | Prototipos, demos, exploración rápida | Sin control fino de chunking, ligado al Playground |
+| **Azure AI Search** | Producción, búsqueda híbrida, facetas | Requiere configuración, tiene costo |
+| **In-Memory (ConcurrentDictionary)** | Desarrollo local, cursos, POC | No persiste, no escala |
 
 ---
 
@@ -470,7 +579,7 @@ Se identifica la oportunidad: el agente actual inyecta información de laborator
 |-------|---------|
 | **Tema Principal** | Arquitectura RAG |
 | **Subtemas** | Patrón RAG, inyección de contexto en tiempo real y optimización de consultas para mejorar la precisión |
-| **Herramientas Microsoft IA** | Semantic Kernel, Azure AI Search, Azure OpenAI |
+| **Herramientas Microsoft IA** | Semantic Kernel, Azure AI Search, Azure OpenAI, Microsoft Foundry (Playground + Índices Vectoriales) |
 | **Duración** | ~2 horas |
 
 **Contenido Teórico:**
@@ -478,9 +587,52 @@ Se identifica la oportunidad: el agente actual inyecta información de laborator
 - Cuándo usar RAG vs. fine-tuning vs. prompt engineering
 - Grounding: anclar las respuestas del LLM a documentos reales
 - Reducción de alucinaciones mediante contexto verificable
+- **RAG en Foundry vs. RAG en código:** Dos caminos al mismo resultado
+
+**Diagrama — Flujo RAG completo:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLUJO RAG (Retrieval-Augmented Generation)   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. INDEXACIÓN (una vez):                                       │
+│     Documentos (.pdf/.txt/.docx)                                │
+│         ↓                                                       │
+│     Chunking (dividir en fragmentos de ~500-1000 tokens)        │
+│         ↓                                                       │
+│     Embedding (cada fragmento → vector de 1536 dimensiones)     │
+│         ↓                                                       │
+│     Almacenar en Vector Store (Azure AI Search / In-Memory)     │
+│                                                                 │
+│  2. CONSULTA (cada request):                                    │
+│     Pregunta del usuario: "¿Cuáles son los requisitos...?"      │
+│         ↓                                                       │
+│     Embedding de la pregunta → vector de 1536 dim               │
+│         ↓                                                       │
+│     Búsqueda vectorial → Top 3-5 fragmentos más similares       │
+│         ↓                                                       │
+│     Prompt = System + Fragmentos relevantes + Pregunta          │
+│         ↓                                                       │
+│     LLM genera respuesta ANCLADA a los documentos               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**🔧 Dos Enfoques RAG Demostrados en Clase:**
+
+| Aspecto | Foundry Web (Portal) | Código (Semantic Kernel + API) |
+|---|---|---|
+| **Cómo se hace** | Adjuntar archivos en Playground → índice vectorial automático | `VectorStoreService.IndexarDocumento()` + `BuscarSimilares()` |
+| **Chunking** | Automático por Foundry | Manual: se controla tamaño de fragmentos |
+| **Embedding** | Automático (usa el model deployment configurado) | Explícito: `ITextEmbeddingGenerationService.GenerateEmbeddingAsync()` |
+| **Vector Store** | Azure AI Search (creado automáticamente) | In-Memory, Azure AI Search, o cualquier conector |
+| **Control** | Bajo — funciona como "caja negra" | Total — cada paso es configurable |
+| **Mejor para** | Prototipos rápidos, demos, exploración | Producción, APIs, integración en sistemas |
 
 **Actividad Práctica — Aprender Haciendo:**
-> Construcción de un asistente que responda preguntas legales basadas exclusivamente en documentos del Vector Store.
+> 1. **RAG zero-code:** Subir documentos legales al Playground de Foundry → hacer preguntas legales → observar cómo el modelo cita los documentos en sus respuestas
+> 2. **RAG en código:** Usar el endpoint `POST /api/rag/indexar/leyes` del proyecto `CursoSK.BankingBot` → luego consultar con `POST /api/rag/buscar` → comparar resultados
+> 3. **Análisis:** ¿Qué enfoque da mejores resultados? ¿Cuándo usar cada uno?
 
 **🔗 Conexión con el Proyecto Real:**
 Se muestra cómo el prompt `InfoLaboratorio` actualmente funciona sin RAG (todo el contexto en el prompt). Se implementa la versión RAG: buscar en el índice vectorial → inyectar solo los fragmentos relevantes → generar respuesta. Los participantes aplican lo mismo para normativas bancarias.
@@ -697,7 +849,26 @@ dotnet add package Microsoft.SemanticKernel.Agents.Orchestration  # Para orquest
 ```
 
 **Actividad Práctica — Aprender Haciendo:**
-> Diseñar una mesa de aprobación de créditos donde un agente líder delega tareas a agentes de cumplimiento.
+> 1. **En Foundry Portal (sin código):** Crear un agente de solicitud en el portal → configurar instrucciones, modelo y herramientas → probar en el Playground de agentes
+> 2. **En código (Semantic Kernel):** Implementar un sistema multi-agente con `ChatCompletionAgent` + `AgentGroupChat` para mesa de aprobación de créditos
+
+**📋 Tipos de Agente en Foundry Agent Service:**
+
+| Tipo | Código Necesario | Orquestación | Mejor Para |
+|---|---|---|---|
+| **Agentes de Solicitud** | No | Agente único, totalmente administrado | Prototipos, herramientas internas, tareas simples |
+| **Agentes de Flujo de Trabajo** (preview) | No (YAML opcional) | Multi-agente, bifurcación, human-in-the-loop | Automatización en varios pasos, coordinación |
+| **Agentes Hospedados** (preview) | Sí (contenedor) | Lógica personalizada completa | Control total, marcos personalizados (SK, LangGraph) |
+
+**Ciclo de vida del agente en Foundry:**
+```
+1. Crear → Definir agente (portal o código)
+2. Probar → Playground de agentes o ejecución local
+3. Trazar → Inspeccionar cada llamada al modelo y herramientas
+4. Evaluar → Medir calidad con evaluaciones automáticas
+5. Publicar → Endpoint estable con versionamiento
+6. Supervisar → Métricas y dashboards en producción
+```
 
 **🔗 Conexión con el Proyecto Real:**
 Se analiza cómo `CotizacionIntegration` ya implementa un **sistema proto-multi-agente** con clasificación de intenciones:
