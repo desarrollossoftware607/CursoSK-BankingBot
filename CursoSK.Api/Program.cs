@@ -1,6 +1,7 @@
 using Microsoft.SemanticKernel;
 using Microsoft.EntityFrameworkCore;
 using CursoSK.Api.Data;
+using CursoSK.Api.Plugins;
 using CursoSK.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,7 +36,12 @@ else
         apiKey: builder.Configuration["LLMSettings:AzureOpenAI:ApiKey"]!);
 }
 
-builder.Services.AddSingleton(kernelBuilder.Build());
+// Plugins
+var kernel = kernelBuilder.Build();
+kernel.Plugins.AddFromObject(new ClimaPlugin(), "Clima");
+kernel.Plugins.AddFromObject(new MathPlugin(), "Matematica");
+
+builder.Services.AddSingleton(kernel);
 
 // --- Servicios ---
 builder.Services.AddSingleton<BlogService>();
